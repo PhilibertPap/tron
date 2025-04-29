@@ -1,3 +1,3 @@
-= Project INF443 Name1 Name2
+# INF 433 Project
 
- Project description ...
+Authors: Philibert PAPPENS & Wandrille BOIVIN
