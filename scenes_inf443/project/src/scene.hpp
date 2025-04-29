@@ -4,6 +4,7 @@
 #include "cgp/cgp.hpp"
 #include "environment.hpp"
 
+
 // This definitions allow to use the structures: mesh, mesh_drawable, etc. without mentionning explicitly cgp::
 using cgp::mesh;
 using cgp::mesh_drawable;
@@ -39,6 +40,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	timer_basic timer;
 
 	mesh_drawable terrain;
+	mesh_drawable grille;
 	mesh_drawable water;
 	mesh_drawable tree;
 	mesh_drawable cube1;

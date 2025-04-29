@@ -1,5 +1,6 @@
 #include "scene.hpp"
 
+#include "textures.hpp"
 
 using namespace cgp;
 
@@ -47,7 +48,13 @@ void scene_structure::initialize()
 	float L = 5.0f;
 	mesh terrain_mesh = mesh_primitive_grid({ -L,-L,0 }, { L,-L,0 }, { L,L,0 }, { -L,L,0 }, 100, 100);
 	//deform_terrain(terrain_mesh);
+
+	mesh grille_mesh = mesh_primitive_quadrangle();
+	grille_mesh.fill_empty_field();
+
 	terrain.initialize_data_on_gpu(terrain_mesh);
+
+
 	/*terrain.texture.load_and_initialize_texture_2d_on_gpu(project::path + "assets/sand.jpg");
 
 	float sea_w = 8.0;
@@ -87,6 +94,7 @@ void scene_structure::display_frame()
 
 	// Draw all the shapes
 	draw(terrain, environment);
+	draw(grille, environment);
 	/*draw(water, environment);
 	draw(tree, environment);
 	draw(cube1, environment);*/
@@ -98,6 +106,7 @@ void scene_structure::display_frame()
 
 	if (gui.display_wireframe) {
 		draw_wireframe(terrain, environment);
+		draw_wireframe(grille, environment);
 		/*draw_wireframe(water, environment);
 		draw_wireframe(tree, environment);
 		draw_wireframe(cube1, environment);
