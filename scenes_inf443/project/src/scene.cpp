@@ -45,40 +45,33 @@ void scene_structure::initialize()
 	// Create the shapes seen in the 3D scene
 	// ********************************************** //
 
-	float L = 5.0f;
-	//mesh terrain_mesh = mesh_primitive_grid({ -L,-L,0 }, { L,-L,0 }, { L,L,0 }, { -L,L,0 }, 100, 100);
-	//deform_terrain(terrain_mesh);
+	//mesh grille_mesh = mesh_primitive_quadrangle({ -L/2,-L/2,0 }, { L/2,-L/2,0 }, { L/2,L/2,0 }, { -L/2,L/2,0 });
+	//deform_terrain(grille_mesh);
+	//grille_mesh.fill_empty_field();
 
-	mesh grille_mesh = mesh_primitive_quadrangle({ -L,-L,0 }, { L,-L,0 }, { L,L,0 }, { -L,L,0 });
-	grille_mesh.fill_empty_field();
+	//grille_mesh.uv.clear(); // On écrase les éventuels UV par défaut
+	//grille_mesh.uv.push_back({ 0.0f, 0.0f });   // bas gauche
+	//grille_mesh.uv.push_back({ NL, 0.0f });  // bas droit
+	//grille_mesh.uv.push_back({ NL, NL }); // haut droit
+	//grille_mesh.uv.push_back({ 0.0f, NL });  // haut gauche
 
-	grille_mesh.uv.clear(); // On écrase les éventuels UV par défaut
-	grille_mesh.uv.push_back({ 0.0f, 0.0f });   // bas gauche
-	grille_mesh.uv.push_back({ 10.0f, 0.0f });  // bas droit
-	grille_mesh.uv.push_back({ 10.0f, 10.0f }); // haut droit
-	grille_mesh.uv.push_back({ 0.0f, 10.0f });  // haut gauche
-	
+
+	float L = 10.0f; // Longueur du Terrain
+	int N = 100; // nombre de subdivisions
+	mesh grille_mesh = mesh_primitive_grid({ -L / 2,-L / 2,0 }, { L / 2,-L / 2,0 }, { L / 2,L / 2,0 }, { -L / 2,L / 2,0 }, N, N);
+	deform_terrain(grille_mesh);
+
+	float repeat = 20.0f;
+	grille_mesh.uv.clear();
+	for (vec3 const& p : grille_mesh.position) {
+		grille_mesh.uv.push_back({ repeat * (p.x + L / 2) / L, repeat * (p.y + L / 2) / L });
+	}
+
+	// Initialize data
+	// ********************************************** //
+
 	grille.initialize_data_on_gpu(grille_mesh);
-	//terrain.initialize_data_on_gpu(terrain_mesh);
 	grille.texture.load_and_initialize_texture_2d_on_gpu(project::path + "assets/grille.png", GL_REPEAT, GL_REPEAT);
-
-	/*terrain.texture.load_and_initialize_texture_2d_on_gpu(project::path + "assets/sand.jpg");
-
-	float sea_w = 8.0;
-	float sea_z = -0.8f;
-	water.initialize_data_on_gpu(mesh_primitive_grid({ -sea_w,-sea_w,sea_z }, { sea_w,-sea_w,sea_z }, { sea_w,sea_w,sea_z }, { -sea_w,sea_w,sea_z }));
-	water.texture.load_and_initialize_texture_2d_on_gpu(project::path + "assets/sea.png");
-
-	tree.initialize_data_on_gpu(mesh_load_file_obj(project::path + "assets/palm_tree/palm_tree.obj"));
-	tree.model.rotation = rotation_transform::from_axis_angle({ 1,0,0 }, Pi / 2.0f);
-	tree.texture.load_and_initialize_texture_2d_on_gpu(project::path + "assets/palm_tree/palm_tree.jpg", GL_REPEAT, GL_REPEAT);
-
-	cube1.initialize_data_on_gpu(mesh_primitive_cube({ 0,0,0 }, 0.5f));
-	cube1.model.rotation = rotation_transform::from_axis_angle({ -1,1,0 }, Pi / 7.0f);
-	cube1.model.translation = { 1.0f,1.0f,-0.1f };
-	cube1.texture.load_and_initialize_texture_2d_on_gpu(project::path + "assets/wood.jpg");
-
-	cube2 = cube1;*/
 
 }
 
@@ -100,24 +93,10 @@ void scene_structure::display_frame()
 	
 
 	// Draw all the shapes
-	//draw(terrain, environment);
 	draw(grille, environment);
-	/*draw(water, environment);
-	draw(tree, environment);
-	draw(cube1, environment);*/
-
-	// Animate the second cube in the water
-	/*cube2.model.translation = { -1.0f, 6.0f+0.1*sin(0.5f*timer.t), -0.8f + 0.1f * cos(0.5f * timer.t)};
-	cube2.model.rotation = rotation_transform::from_axis_angle({1,-0.2,0},Pi/12.0f*sin(0.5f*timer.t));
-	draw(cube2, environment);*/
 
 	if (gui.display_wireframe) {
-		//draw_wireframe(terrain, environment);
 		draw_wireframe(grille, environment);
-		/*draw_wireframe(water, environment);
-		draw_wireframe(tree, environment);
-		draw_wireframe(cube1, environment);
-		draw_wireframe(cube2, environment);*/
 	}
 	
 
