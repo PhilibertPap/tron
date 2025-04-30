@@ -1,6 +1,7 @@
 # INF 433
 
 Auteurs: Philibert PAPPENS & Wandrille BOIVIN
+Sujet: TRON
 
 ## A faire
 
