@@ -11,7 +11,6 @@ Le jeu le plus emblématique issu de TRON est appelé "Light Cycle" :
 - Chaque joueur contrôle une moto futuriste qui laisse derrière elle une traînée lumineuse.
 - Cette traînée agit comme un mur : si un joueur entre en collision avec une traînée, il perd.
 - Le but est de piéger les autres joueurs en traçant des lignes et en évitant les collisions.
-- La vue est généralement de dessus ou en 3D avec une grille futuriste au sol.
 
 🎨 Style visuel :
 - Grille au sol noire avec des lignes lumineuses bleues, rouges, vertes, etc.
