@@ -46,14 +46,21 @@ void scene_structure::initialize()
 	// ********************************************** //
 
 	float L = 5.0f;
-	mesh terrain_mesh = mesh_primitive_grid({ -L,-L,0 }, { L,-L,0 }, { L,L,0 }, { -L,L,0 }, 100, 100);
+	//mesh terrain_mesh = mesh_primitive_grid({ -L,-L,0 }, { L,-L,0 }, { L,L,0 }, { -L,L,0 }, 100, 100);
 	//deform_terrain(terrain_mesh);
 
-	mesh grille_mesh = mesh_primitive_quadrangle();
+	mesh grille_mesh = mesh_primitive_quadrangle({ -L,-L,0 }, { L,-L,0 }, { L,L,0 }, { -L,L,0 });
 	grille_mesh.fill_empty_field();
 
-	terrain.initialize_data_on_gpu(terrain_mesh);
-
+	grille_mesh.uv.clear(); // On écrase les éventuels UV par défaut
+	grille_mesh.uv.push_back({ 0.0f, 0.0f });   // bas gauche
+	grille_mesh.uv.push_back({ 10.0f, 0.0f });  // bas droit
+	grille_mesh.uv.push_back({ 10.0f, 10.0f }); // haut droit
+	grille_mesh.uv.push_back({ 0.0f, 10.0f });  // haut gauche
+	
+	grille.initialize_data_on_gpu(grille_mesh);
+	//terrain.initialize_data_on_gpu(terrain_mesh);
+	grille.texture.load_and_initialize_texture_2d_on_gpu(project::path + "assets/grille.png", GL_REPEAT, GL_REPEAT);
 
 	/*terrain.texture.load_and_initialize_texture_2d_on_gpu(project::path + "assets/sand.jpg");
 
@@ -93,7 +100,7 @@ void scene_structure::display_frame()
 	
 
 	// Draw all the shapes
-	draw(terrain, environment);
+	//draw(terrain, environment);
 	draw(grille, environment);
 	/*draw(water, environment);
 	draw(tree, environment);
@@ -105,7 +112,7 @@ void scene_structure::display_frame()
 	draw(cube2, environment);*/
 
 	if (gui.display_wireframe) {
-		draw_wireframe(terrain, environment);
+		//draw_wireframe(terrain, environment);
 		draw_wireframe(grille, environment);
 		/*draw_wireframe(water, environment);
 		draw_wireframe(tree, environment);
