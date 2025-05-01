@@ -1,6 +1,6 @@
 #include "scene.hpp"
 
-#include "textures.hpp"
+#include "trail.hpp"
 
 using namespace cgp;
 
@@ -45,16 +45,6 @@ void scene_structure::initialize()
 	// Create the shapes seen in the 3D scene
 	// ********************************************** //
 
-	//mesh grille_mesh = mesh_primitive_quadrangle({ -L/2,-L/2,0 }, { L/2,-L/2,0 }, { L/2,L/2,0 }, { -L/2,L/2,0 });
-	//deform_terrain(grille_mesh);
-	//grille_mesh.fill_empty_field();
-
-	//grille_mesh.uv.clear(); // On écrase les éventuels UV par défaut
-	//grille_mesh.uv.push_back({ 0.0f, 0.0f });   // bas gauche
-	//grille_mesh.uv.push_back({ NL, 0.0f });  // bas droit
-	//grille_mesh.uv.push_back({ NL, NL }); // haut droit
-	//grille_mesh.uv.push_back({ 0.0f, NL });  // haut gauche
-
 	// Terrain sous forme de grille
 	float L = 50.0f; // Longueur du Terrain
 	int N = 100; // nombre de subdivisions
@@ -67,23 +57,26 @@ void scene_structure::initialize()
 		grille_mesh.uv.push_back({ repeat * (p.x + L / 2) / L, repeat * (p.y + L / 2) / L });
 	}
 
-	// Voitures
+	// Moto
 	mesh body_mesh = mesh_primitive_cylinder(0.4f, { -1,0,0 }, { 1,0,0 }); // corps long
 	mesh wheel_mesh = mesh_primitive_torus(0.5f, 0.3f);
+
+	// Trail
+	mesh trail_mesh = mesh();
 
 	// Initialize data
 	// ********************************************** //
 
 	grille.initialize_data_on_gpu(grille_mesh);
 	grille.texture.load_and_initialize_texture_2d_on_gpu(project::path + "assets/grille.png", GL_REPEAT, GL_REPEAT);
+
 	body.initialize_data_on_gpu(body_mesh);
 	wheel.initialize_data_on_gpu(wheel_mesh);
-	wheel.texture.load_and_initialize_texture_2d_on_gpu();
-
 	moto.add(body, "Body", "Root");
 	moto.add(wheel, "Wheel1", "Body", { 1.5f, 0.0f, 0.0f });
 	moto.add(wheel, "Wheel2", "Body", { -1.5f, 0.0f, 0.0f });
 
+	trail.initialize_data_on_gpu(trail_mesh);
 
 }
 
@@ -106,6 +99,8 @@ void scene_structure::display_frame()
 
 	// Draw all the shapes
 	draw(grille, environment);
+	
+	// Moto
 
 	float radius = 5.0f;
 	moto["Body"].transform_local.translation = 
@@ -125,6 +120,16 @@ void scene_structure::display_frame()
 	moto.update_local_to_global_coordinates();
 
 	draw(moto, environment);
+
+
+	// Trail positions
+
+	vec3 current_pos = moto["Body"].transform_local.translation;
+	trail_positions.push_back(current_pos);
+
+	draw(trail, environment);
+
+	// Display Wireframe
 
 	if (gui.display_wireframe) {
 		draw_wireframe(grille, environment);

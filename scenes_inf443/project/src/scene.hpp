@@ -3,6 +3,7 @@
 
 #include "cgp/cgp.hpp"
 #include "environment.hpp"
+#include <deque>
 
 
 // This definitions allow to use the structures: mesh, mesh_drawable, etc. without mentionning explicitly cgp::
@@ -44,6 +45,11 @@ struct scene_structure : cgp::scene_inputs_generic {
 	mesh_drawable grille;
 	mesh_drawable body;
 	mesh_drawable wheel;
+	cgp::mesh trail_mesh;
+	mesh_drawable trail;
+
+	std::deque<vec3> trail_positions;
+	int max_trail_length = 100;
 
 	// ****************************** //
 	// Functions
