@@ -55,11 +55,11 @@ void scene_structure::initialize()
 	//grille_mesh.uv.push_back({ NL, NL }); // haut droit
 	//grille_mesh.uv.push_back({ 0.0f, NL });  // haut gauche
 
-
-	float L = 10.0f; // Longueur du Terrain
+	// Terrain sous forme de grille
+	float L = 50.0f; // Longueur du Terrain
 	int N = 100; // nombre de subdivisions
 	mesh grille_mesh = mesh_primitive_grid({ -L / 2,-L / 2,0 }, { L / 2,-L / 2,0 }, { L / 2,L / 2,0 }, { -L / 2,L / 2,0 }, N, N);
-	deform_terrain(grille_mesh);
+	//deform_terrain(grille_mesh);
 
 	float repeat = 20.0f;
 	grille_mesh.uv.clear();
@@ -67,11 +67,23 @@ void scene_structure::initialize()
 		grille_mesh.uv.push_back({ repeat * (p.x + L / 2) / L, repeat * (p.y + L / 2) / L });
 	}
 
+	// Voitures
+	mesh body_mesh = mesh_primitive_cylinder(0.4f, { -1,0,0 }, { 1,0,0 }); // corps long
+	mesh wheel_mesh = mesh_primitive_torus(0.5f, 0.3f);
+
 	// Initialize data
 	// ********************************************** //
 
 	grille.initialize_data_on_gpu(grille_mesh);
 	grille.texture.load_and_initialize_texture_2d_on_gpu(project::path + "assets/grille.png", GL_REPEAT, GL_REPEAT);
+	body.initialize_data_on_gpu(body_mesh);
+	wheel.initialize_data_on_gpu(wheel_mesh);
+	wheel.texture.load_and_initialize_texture_2d_on_gpu();
+
+	moto.add(body, "Body", "Root");
+	moto.add(wheel, "Wheel1", "Body", { 1.5f, 0.0f, 0.0f });
+	moto.add(wheel, "Wheel2", "Body", { -1.5f, 0.0f, 0.0f });
+
 
 }
 
@@ -83,29 +95,42 @@ void scene_structure::display_frame()
 
 	// Set the light to the current position of the camera
 	environment.light = camera_control.camera_model.position();
-
-	// Update time
-	timer.update();
+	
 
 	// conditional display of the global frame (set via the GUI)
 	if (gui.display_frame)
 		draw(global_frame, environment);
 	
+	// Update time
+	timer.update();
 
 	// Draw all the shapes
 	draw(grille, environment);
 
+	float radius = 5.0f;
+	moto["Body"].transform_local.translation = 
+	{
+		radius * cos(2.0f * timer.t),
+		radius * sin(2.0f * timer.t),
+		0.8f 
+	};
+	moto["Body"].transform_local.rotation = rotation_transform::from_axis_angle({ 0, 0, 1 }, 2.0f * timer.t + Pi / 2.0f);
+
+	float wheel_angle = 5.0f * timer.t;
+	rotation_transform wheel_orientation = rotation_transform::from_axis_angle({ 1,0,0 }, Pi / 2.0f);
+	rotation_transform wheel_spin = rotation_transform::from_axis_angle({ 0,0,1 }, wheel_angle);
+	moto["Wheel1"].transform_local.rotation = wheel_orientation * wheel_spin;
+	moto["Wheel2"].transform_local.rotation = wheel_orientation * wheel_spin;
+
+	moto.update_local_to_global_coordinates();
+
+	draw(moto, environment);
+
 	if (gui.display_wireframe) {
 		draw_wireframe(grille, environment);
+		draw_wireframe(moto, environment);
 	}
 	
-
-
-
-
-
-
-
 }
 
 void scene_structure::display_gui()
