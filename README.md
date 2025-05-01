@@ -5,8 +5,8 @@ Auteurs: Philibert PAPPENS & Wandrille BOIVIN
 🎮 TRON – Le jeu
 
 Le jeu TRON est inspiré de l’univers du film Tron (1982, puis Tron: Legacy en 2010), qui met en scène des personnages plongés dans un monde numérique.
-🎲 Concept de jeu :
 
+🎲 Concept de jeu :
 Le jeu le plus emblématique issu de TRON est appelé "Light Cycle" :
 - Chaque joueur contrôle une moto futuriste qui laisse derrière elle une traînée lumineuse.
 - Cette traînée agit comme un mur : si un joueur entre en collision avec une traînée, il perd.
