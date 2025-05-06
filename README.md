@@ -21,8 +21,16 @@ Le jeu le plus emblématique issu de TRON est appelé "Light Cycle" :
 
 - Texture pour créer la grille: doit-on rajouter de la lumière?
 - Voiture qui éclaire le sol avec sa couleur 
-- Muret avec un gradient de couleur
-    -> Doit on recréer un mesh à chaque frame ou seulement modifier le mesh_drawable?
 - Collisions
 - Faire des étages + passerelles + gestion des chutes
 - Moto qui se penche quand on tourne
+
+Pour le muret:
+- Mesh unité = 2 triangles
+- Discrétiser pour les courbes
+- version force brute: clear() + réinitialisation du mesh
+- belle version: Créer un Mesh de taille fixe + update, pré-allouer une taille fixe de sommets + connectivités (modulo la taille)
+
+Lumières sur le sol:
+- Initialiser l'effet qu'elles ont sur le sol à côté
+- Utiliser les N plus proches pour l'effet sur la moto

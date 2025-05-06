@@ -1,4 +1,6 @@
 #pragma once
 
-#include <deque>
 #include "cgp/cgp.hpp"
+using namespace cgp;
+
+mesh create_trail(const std::vector<vec3>& positions);

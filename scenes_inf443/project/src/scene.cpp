@@ -49,7 +49,7 @@ void scene_structure::initialize()
 	float L = 50.0f; // Longueur du Terrain
 	int N = 100; // nombre de subdivisions
 	mesh grille_mesh = mesh_primitive_grid({ -L / 2,-L / 2,0 }, { L / 2,-L / 2,0 }, { L / 2,L / 2,0 }, { -L / 2,L / 2,0 }, N, N);
-	deform_terrain(grille_mesh);
+	//deform_terrain(grille_mesh);
 
 	float repeat = 20.0f;
 	grille_mesh.uv.clear();
@@ -124,8 +124,20 @@ void scene_structure::display_frame()
 
 	// Trail positions
 
+
 	vec3 current_pos = moto["Body"].transform_local.translation;
 	trail_positions.push_back(current_pos);
+
+	if (trail_positions.size() > 100) // Taille max du trail
+	{
+		trail_positions.erase(trail_positions.begin());
+	}
+
+	trail.vbo_position.clear();
+
+	trail_mesh = create_trail(trail_positions);
+
+	trail.initialize_supplementary_data_on_gpu();
 
 	draw(trail, environment);
 
@@ -134,6 +146,7 @@ void scene_structure::display_frame()
 	if (gui.display_wireframe) {
 		draw_wireframe(grille, environment);
 		draw_wireframe(moto, environment);
+		draw_wireframe(trail, environment);
 	}
 	
 }
