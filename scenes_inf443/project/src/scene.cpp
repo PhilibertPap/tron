@@ -49,7 +49,7 @@ void scene_structure::initialize()
 	float L = 50.0f; // Longueur du Terrain
 	int N = 100; // nombre de subdivisions
 	mesh grille_mesh = mesh_primitive_grid({ -L / 2,-L / 2,0 }, { L / 2,-L / 2,0 }, { L / 2,L / 2,0 }, { -L / 2,L / 2,0 }, N, N);
-	//deform_terrain(grille_mesh);
+	deform_terrain(grille_mesh);
 
 	float repeat = 20.0f;
 	grille_mesh.uv.clear();
