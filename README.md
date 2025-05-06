@@ -19,7 +19,7 @@ Le jeu le plus emblématique issu de TRON est appelé "Light Cycle" :
 
 ## A faire
 
-- Texture pour créer la grille: doit-on rajouter 
+- Texture pour créer la grille: doit-on rajouter de la lumière?
 - Voiture qui éclaire le sol avec sa couleur 
 - Muret avec un gradient de couleur
     -> Doit on recréer un mesh à chaque frame ou seulement modifier le mesh_drawable?
