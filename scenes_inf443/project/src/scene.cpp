@@ -133,7 +133,7 @@ void scene_structure::display_frame()
 	}
 
 	trail.vbo_position.clear();
-
+	
 	trail_mesh = create_trail(trail_positions);
 
 	trail.initialize_data_on_gpu(trail_mesh);

@@ -28,9 +28,14 @@ Le jeu le plus emblématique issu de TRON est appelé "Light Cycle" :
 Pour le muret:
 - Mesh unité = 2 triangles
 - Discrétiser pour les courbes
-- version force brute: clear() + réinitialisation du mesh
+- version force brute: clear() + réinitialisation du mesh -> fait
 - belle version: Créer un Mesh de taille fixe + update, pré-allouer une taille fixe de sommets + connectivités (modulo la taille)
 
 Lumières sur le sol:
+- Disposées à intervalles réguliers (à chaque coin de quadrangle)
 - Initialiser l'effet qu'elles ont sur le sol à côté
 - Utiliser les N plus proches pour l'effet sur la moto
+
+Gestion des collisions:
+- Avec n'importe quel muret
+- Dès que la moto touche le muret, elle disparait
