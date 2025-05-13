@@ -137,7 +137,7 @@ void scene_structure::display_frame()
 
 	trail_mesh = create_trail(trail_positions);
 
-	trail.initialize_supplementary_data_on_gpu();
+	trail.initialize_data_on_gpu(trail_mesh);
 
 	draw(trail, environment);
 
