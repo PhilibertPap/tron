@@ -124,7 +124,6 @@ void scene_structure::display_frame()
 
 	// Trail positions
 
-
 	vec3 current_pos = moto["Body"].transform_local.translation;
 	trail_positions.push_back(current_pos);
 
