@@ -16,6 +16,13 @@ using cgp::timer_basic;
 struct gui_parameters {
 	bool display_frame = true;
 	bool display_wireframe = false;
+
+	float ambiant = 1.0f;
+	float diffuse = 0.65f;
+	float specular = 0.60f;
+	float specular_exp = 100.0f;
+	float d_max = 50.0f;
+	float dl_max = 15.0f;
 };
 
 // The structure of the custom scene

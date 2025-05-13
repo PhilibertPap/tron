@@ -78,6 +78,17 @@ void scene_structure::initialize()
 
 	trail.initialize_data_on_gpu(trail_mesh);
 
+	// Shaders
+	// ********************************************** //
+
+	// Load the custom shader
+	opengl_shader_structure shader_custom;
+	shader_custom.load(
+		project::path + "shaders/single_color/single_color.vert.glsl",
+		project::path + "shaders/single_color/single_color.frag.glsl");
+
+	// Affect the loaded shader to the mesh_drawable
+	body.shader = shader_custom;
 }
 
 
@@ -88,7 +99,14 @@ void scene_structure::display_frame()
 
 	// Set the light to the current position of the camera
 	environment.light = camera_control.camera_model.position();
-	
+
+	// Set additional uniform parameters to the shader
+	environment.uniform_generic.uniform_float["ambiant"] = gui.ambiant;
+	environment.uniform_generic.uniform_float["diffuse"] = gui.diffuse;
+	environment.uniform_generic.uniform_float["specular"] = gui.specular;
+	environment.uniform_generic.uniform_float["specular_exp"] = gui.specular_exp;
+	environment.uniform_generic.uniform_float["d_max"] = gui.d_max;
+	environment.uniform_generic.uniform_float["dl_max"] = gui.dl_max;
 
 	// conditional display of the global frame (set via the GUI)
 	if (gui.display_frame)
@@ -154,7 +172,12 @@ void scene_structure::display_gui()
 {
 	ImGui::Checkbox("Frame", &gui.display_frame);
 	ImGui::Checkbox("Wireframe", &gui.display_wireframe);
-
+	ImGui::SliderFloat("Ambiant", &gui.ambiant, 0.0f, 1.0f);
+	ImGui::SliderFloat("Diffuse", &gui.diffuse, 0.0f, 1.0f);
+	ImGui::SliderFloat("Specular", &gui.specular, 0.0f, 1.0f);
+	ImGui::SliderFloat("Specular Exp.", &gui.specular_exp, 0.0f, 256.0f);
+	ImGui::SliderFloat("d_max", &gui.d_max, 0.0f, 100.0f);
+	ImGui::SliderFloat("dl_max", &gui.dl_max, 0.0f, 100.0f);
 }
 
 void scene_structure::mouse_move_event()
