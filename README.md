@@ -30,6 +30,7 @@ Pour le muret:
 - Discrétiser pour les courbes
 - version force brute: clear() + réinitialisation du mesh -> fait
 - belle version: Créer un Mesh de taille fixe + update, pré-allouer une taille fixe de sommets + connectivités (modulo la taille)
+- Améliorer le mesh (couleur, lumière etc)
 
 Lumières sur le sol:
 - Disposées à intervalles réguliers (à chaque coin de quadrangle)
