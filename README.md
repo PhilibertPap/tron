@@ -39,7 +39,7 @@ Lumières sur le sol:
 
 Gestion des collisions:
 - Avec n'importe quel muret
-- Dès que la moto touche le muret, elle disparait
+- Dès que la moto touche le muret, elle disparait ou la simulation s'arrête
 
 Moto:
 - Changer le style de la moto

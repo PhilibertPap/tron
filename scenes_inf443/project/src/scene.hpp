@@ -17,12 +17,7 @@ struct gui_parameters {
 	bool display_frame = true;
 	bool display_wireframe = false;
 
-	float ambiant = 1.0f;
-	float diffuse = 0.65f;
-	float specular = 0.60f;
-	float specular_exp = 100.0f;
-	float d_max = 50.0f;
-	float dl_max = 15.0f;
+	vec3 light_color = { 1,1,1 };
 };
 
 // The structure of the custom scene
@@ -53,6 +48,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	mesh_drawable wheel;
 	cgp::mesh trail_mesh;
 	mesh_drawable trail;
+	mesh_drawable ground_light;
 
 	std::vector<vec3> trail_positions;
 	int max_trail_length = 100;
