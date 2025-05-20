@@ -40,3 +40,7 @@ Lumières sur le sol:
 Gestion des collisions:
 - Avec n'importe quel muret
 - Dès que la moto touche le muret, elle disparait
+
+Moto:
+- Changer le style de la moto
+- Faire avancer sur un chemin prédéfini / au hasard / nous-mêmes
