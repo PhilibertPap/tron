@@ -28,11 +28,12 @@ layout(location=0) out vec4 FragColor;
 // Uniform values that must be send from the C++ code
 // ***************************************************** //
 
+uniform vec3 local_light;
+uniform vec3 light_color;
+
 uniform sampler2D image_texture;   // Texture image identifiant
 
 uniform mat4 view;       // View matrix (rigid transform) of the camera - to compute the camera position
-
-uniform vec3 light; // position of the light
 
 
 // Coefficients of phong illumination model
@@ -83,18 +84,21 @@ void main()
 	// Phong coefficient (diffuse, specular)
 	// *************************************** //
 
-	// Unit direction toward the light
-	vec3 L = normalize(light-fragment.position);
+	// Direction vers la lumière locale
+	vec3 L = normalize(local_light - fragment.position);
+	float diffuse_component = max(dot(N, L), 0.0);
 
-	// Diffuse coefficient
-	float diffuse_component = max(dot(N,L),0.0);
+	// Atténuation simple selon la distance
+	float dist = length(local_light - fragment.position);
+	float attenuation = 1.0 / (1.0 + 0.05 * dist + 0.01 * dist * dist);
 
-	// Specular coefficient
+	diffuse_component *= attenuation;
+
 	float specular_component = 0.0;
-	if(diffuse_component>0.0){
-		vec3 R = reflect(-L,N); // reflection of light vector relative to the normal.
-		vec3 V = normalize(camera_position-fragment.position);
-		specular_component = pow( max(dot(R,V),0.0), material.phong.specular_exponent );
+	if(diffuse_component > 0.0) {
+	    vec3 R = reflect(-L, N);
+	    vec3 V = normalize(camera_position - fragment.position);
+	    specular_component = pow(max(dot(R, V), 0.0), material.phong.specular_exponent) * attenuation;
 	}
 
 	// Texture
@@ -122,7 +126,7 @@ void main()
 	float Ka = material.phong.ambient;
 	float Kd = material.phong.diffuse;
 	float Ks = material.phong.specular;
-	vec3 color_shading = (Ka + Kd * diffuse_component) * color_object + Ks * specular_component * vec3(1.0, 1.0, 1.0);
+	vec3 color_shading = (Ka + Kd * diffuse_component) * color_object * light_color + Ks * specular_component * light_color;
 	
 	// Output color, with the alpha component
 	FragColor = vec4(color_shading, material.alpha * color_image_texture.a);

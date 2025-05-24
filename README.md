@@ -24,6 +24,7 @@ Le jeu le plus emblématique issu de TRON est appelé "Light Cycle" :
 - Collisions
 - Faire des étages + passerelles + gestion des chutes
 - Moto qui se penche quand on tourne
+- Skybox
 
 Pour le muret:
 - Mesh unité = 2 triangles
@@ -44,3 +45,7 @@ Gestion des collisions:
 Moto:
 - Changer le style de la moto
 - Faire avancer sur un chemin prédéfini / au hasard / nous-mêmes
+
+Skybox:
+- Utilisation d'une image de galaxies
+- Problème d'orientation pour d'autres images, mais celle-ci n'en a pas vraiment donc ok

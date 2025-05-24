@@ -57,6 +57,14 @@ void scene_structure::initialize()
 		grille_mesh.uv.push_back({ repeat * (p.x + L / 2) / L, repeat * (p.y + L / 2) / L });
 	}
 
+	// Placement des luminaires
+	float interval = 10.0f;
+	for (float x = -L/2; x <= L/2; x += interval) {
+		for (float y = -L/2; y <= L/2; y += interval) {
+			luminaire_positions.push_back({x, y, 1.0f}); // 1.0f = hauteur du luminaire
+		}
+	}
+
 	// Moto
 	mesh body_mesh = mesh_primitive_cylinder(0.4f, { -1,0,0 }, { 1,0,0 }); // corps long
 	mesh wheel_mesh = mesh_primitive_torus(0.5f, 0.3f);
@@ -65,10 +73,6 @@ void scene_structure::initialize()
 	mesh trail_mesh = mesh();
 
 	// Skybox
-	image_structure image_skybox_template = image_load_file(project::path + "assets/skybox.png");
-	
-	// Split the image into a grid of 4 x 3 sub-images
-	std::vector<image_structure> image_grid = image_split_grid(image_skybox_template, 4, 3);
 
 	image_structure img_right = image_load_file(project::path + "assets/skybox/px.png");
 	image_structure img_left = image_load_file(project::path + "assets/skybox/nx.png");
@@ -101,7 +105,7 @@ void scene_structure::initialize()
 
 	trail.initialize_data_on_gpu(trail_mesh);
 
-	ground_light.initialize_data_on_gpu(mesh_primitive_sphere());
+	luminaire_mesh.initialize_data_on_gpu(mesh_primitive_sphere(0.3f));
 }
 
 
@@ -116,10 +120,10 @@ void scene_structure::display_frame()
 	// Set additional uniform parameters to the shader
 	environment.uniform_generic.uniform_vec3["light_color"] = gui.light_color;
 
-	//  Must be called before drawing the other shapes and without writing in the Depth Buffer
-	glDepthMask(GL_FALSE); // disable depth-buffer writing
+	//  Skybox
+	glDepthMask(GL_FALSE);
 	draw(skybox, environment);
-	glDepthMask(GL_TRUE);  // re-activate depth-buffer write
+	glDepthMask(GL_TRUE);  
 
 	// conditional display of the global frame (set via the GUI)
 	if (gui.display_frame)
@@ -130,13 +134,6 @@ void scene_structure::display_frame()
 
 	// Draw all the shapes
 	draw(grille, environment);
-	
-	ground_light.model.translation = { 0.0f,0.0f,1.0f };
-	ground_light.material.color = gui.light_color * 0.8f;
-	ground_light.material.phong.ambient = 1;
-	ground_light.material.phong.diffuse = 0;
-	ground_light.material.phong.specular = 0;
-	draw(ground_light, environment);
 
 	// Moto
 	// ********************************* //
@@ -179,6 +176,20 @@ void scene_structure::display_frame()
 
 	draw(trail, environment);
 
+	// Trouver le luminaire le plus proche de la moto
+	current_pos = moto["Body"].transform_local.translation;
+	float min_dist = 1e9f;
+	vec3 closest_light = {0,0,0};
+	for (const vec3& pos : luminaire_positions) {
+		float d = norm(current_pos - pos);
+		if (d < min_dist) {
+			min_dist = d;
+			closest_light = pos;
+		}
+	}
+	// Passer la position au shader
+	environment.uniform_generic.uniform_vec3["local_light"] = closest_light;
+
 	// Display Wireframe
 
 	if (gui.display_wireframe) {
@@ -202,16 +213,18 @@ void scene_structure::mouse_move_event()
 	if (!inputs.keyboard.shift)
 		camera_control.action_mouse_move(environment.camera_view);
 }
+
 void scene_structure::mouse_click_event()
 {
 	camera_control.action_mouse_click(environment.camera_view);
 }
+
 void scene_structure::keyboard_event()
 {
 	camera_control.action_keyboard(environment.camera_view);
 }
+
 void scene_structure::idle_frame()
 {
 	camera_control.idle_frame(environment.camera_view);
 }
-

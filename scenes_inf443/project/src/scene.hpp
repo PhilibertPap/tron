@@ -48,20 +48,14 @@ struct scene_structure : cgp::scene_inputs_generic {
 	mesh_drawable wheel;
 	cgp::mesh trail_mesh;
 	mesh_drawable trail;
-	mesh_drawable ground_light;
+	mesh_drawable luminaire_mesh;
 
 	cgp::skybox_drawable skybox;
 
 	std::vector<vec3> trail_positions;
 	int max_trail_length = 100;
 
-	vec3 moto_position = {0, 0, 0.8f};
-	float moto_speed = 0.0f;           // vitesse actuelle
-	float moto_speed_max = 0.3f;       // vitesse maximale
-	float moto_acceleration = 0.01f;   // accélération par frame
-	float moto_friction = 0.005f;      // ralentissement naturel
-	float moto_angle = 0.0f;           // direction (en radians)
-	float moto_turn_speed = 0.03f;     // vitesse de rotation (pour la courbe)
+	std::vector<vec3> luminaire_positions;
 
 	// ****************************** //
 	// Functions
