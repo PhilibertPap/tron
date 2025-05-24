@@ -28,6 +28,10 @@ layout(location=0) out vec4 FragColor;
 // Uniform values that must be send from the C++ code
 // ***************************************************** //
 
+#define MAX_LIGHTS 8
+uniform int light_count;
+uniform vec3 local_lights[MAX_LIGHTS];
+
 uniform vec3 local_light;
 uniform vec3 light_color;
 
@@ -84,22 +88,23 @@ void main()
 	// Phong coefficient (diffuse, specular)
 	// *************************************** //
 
-	// Direction vers la lumière locale
-	vec3 L = normalize(local_light - fragment.position);
-	float diffuse_component = max(dot(N, L), 0.0);
-
-	// Atténuation simple selon la distance
-	float dist = length(local_light - fragment.position);
-	float attenuation = 1.0 / (1.0 + 0.05 * dist + 0.01 * dist * dist);
-
-	diffuse_component *= attenuation;
-
+	float diffuse_component = 0.0;
 	float specular_component = 0.0;
-	if(diffuse_component > 0.0) {
-	    vec3 R = reflect(-L, N);
-	    vec3 V = normalize(camera_position - fragment.position);
-	    specular_component = pow(max(dot(R, V), 0.0), material.phong.specular_exponent) * attenuation;
+	for(int i=0; i<MAX_LIGHTS; ++i) {
+	    if(i >= light_count) break;
+	    vec3 L = normalize(local_lights[i] - fragment.position);
+	    float diff = max(dot(N, L), 0.0);
+	    float dist = length(local_lights[i] - fragment.position);
+	    float attenuation = 1.0 / (1.0 + 0.05 * dist + 0.01 * dist * dist);
+	    diffuse_component += diff * attenuation;
+	    if(diff > 0.0) {
+	        vec3 R = reflect(-L, N);
+	        vec3 V = normalize(camera_position - fragment.position);
+	        specular_component += pow(max(dot(R, V), 0.0), material.phong.specular_exponent) * attenuation;
+	    }
 	}
+	diffuse_component = min(diffuse_component, 1.0);
+	specular_component = min(specular_component, 1.0);
 
 	// Texture
 	// *************************************** //

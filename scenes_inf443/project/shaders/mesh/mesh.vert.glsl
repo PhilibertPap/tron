@@ -38,7 +38,7 @@ void main()
 
 	// Fill the parameters sent to the fragment shader
 	fragment.position = position.xyz;
-	fragment.normal   = normalize(normal.xyz);
+	fragment.normal   = normal.xyz;
 	fragment.color = vertex_color;
 	fragment.uv = vertex_uv;
 

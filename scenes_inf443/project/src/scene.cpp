@@ -11,9 +11,9 @@ void deform_terrain(mesh& m)
 	{
 		vec3& p = m.position[k];
 		float d2 = p.x*p.x + p.y * p.y;
-		float z = exp(-0.05 * d2 / 4)-1;
+		float z = exp(- d2 / 4)-1;
 
-		z = z + 0.1f*noise_perlin({ p.x,p.y });
+		z = z + 0.05f*noise_perlin({ p.x,p.y });
 
 		p = { p.x, p.y, z };
 	}
@@ -54,6 +54,29 @@ float get_grid_height(const mesh& grille_mesh, float L, int N, float x, float y)
     float z = (1-ty)*z0 + ty*z1;
 
     return z;
+}
+
+void get_k_closest_lights(const std::vector<vec3>& luminaire_positions, const vec3& pos, int k, std::vector<vec3>& out_lights)
+{
+    out_lights.clear();
+    std::vector<float> max_dists(k, std::numeric_limits<float>::max());
+    std::vector<vec3> closest(k, {0,0,0});
+
+    for (const vec3& l : luminaire_positions) {
+        float d = norm(l - pos);
+        // Trouver la case la plus éloignée dans closest[]
+        int imax = 0;
+        for (int i = 1; i < k; ++i)
+            if (max_dists[i] > max_dists[imax]) imax = i;
+        // Si ce luminaire est plus proche que le plus éloigné du tableau, on le remplace
+        if (d < max_dists[imax]) {
+            max_dists[imax] = d;
+            closest[imax] = l;
+        }
+    }
+    // Remplir le résultat
+    for (int i = 0; i < k; ++i)
+        out_lights.push_back(closest[i]);
 }
 
 // This function is called only once at the beginning of the program
@@ -171,6 +194,13 @@ void scene_structure::display_frame()
 	timer.update();
 
 	// Draw all the shapes
+
+	const int MAX_LIGHTS = 9;
+	std::vector<vec3> sol_lights;
+	get_k_closest_lights(luminaire_positions, {0,0,0}, MAX_LIGHTS, sol_lights);
+	environment.uniform_generic.uniform_int["light_count"] = int(sol_lights.size());
+	for (int i = 0; i < sol_lights.size(); ++i)
+		environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = sol_lights[i];
 	draw(grille, environment);
 
 	// Moto
@@ -192,13 +222,19 @@ void scene_structure::display_frame()
 
 	moto.update_local_to_global_coordinates();
 
+	std::vector<vec3> moto_lights;
+	vec3 moto_pos = moto["Body"].transform_local.translation;
+	get_k_closest_lights(luminaire_positions, moto_pos, 3, moto_lights);
+	environment.uniform_generic.uniform_int["light_count"] = int(moto_lights.size());
+	for (int i = 0; i < moto_lights.size(); ++i)
+		environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = moto_lights[i];
 	draw(moto, environment);
 
 
 	// Trail positions
 
-	vec3 current_pos = moto["Body"].transform_local.translation;
-	trail_positions.push_back(current_pos);
+	vec3 rear_pos = moto["Body"].transform_local.translation;
+	trail_positions.push_back(rear_pos);
 
 	if (trail_positions.size() > 100) // Taille max du trail
 	{
@@ -214,7 +250,7 @@ void scene_structure::display_frame()
 	draw(trail, environment);
 
 	// Trouver le luminaire le plus proche de la moto
-	current_pos = moto["Body"].transform_local.translation;
+	vec3 current_pos = moto["Wheel2"].transform_local.translation;
 	float min_dist = 1e9f;
 	vec3 closest_light = {0,0,0};
 	for (const vec3& pos : luminaire_positions) {
