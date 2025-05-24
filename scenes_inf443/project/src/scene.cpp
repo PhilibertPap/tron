@@ -64,6 +64,29 @@ void scene_structure::initialize()
 	// Trail
 	mesh trail_mesh = mesh();
 
+	// Skybox
+	image_structure image_skybox_template = image_load_file(project::path + "assets/skybox.png");
+	
+	// Split the image into a grid of 4 x 3 sub-images
+	std::vector<image_structure> image_grid = image_split_grid(image_skybox_template, 4, 3);
+
+	image_structure img_right = image_load_file(project::path + "assets/skybox/px.png");
+	image_structure img_left = image_load_file(project::path + "assets/skybox/nx.png");
+	image_structure img_top = image_load_file(project::path + "assets/skybox/py.png");
+	image_structure img_bottom = image_load_file(project::path + "assets/skybox/ny.png");
+	image_structure img_front = image_load_file(project::path + "assets/skybox/pz.png");
+	image_structure img_back = image_load_file(project::path + "assets/skybox/nz.png");
+
+	skybox.initialize_data_on_gpu();
+	skybox.texture.initialize_cubemap_on_gpu(
+		img_left,
+		img_right,
+		img_bottom,
+		img_top,
+		img_back,
+		img_front
+	);
+
 	// Initialize data
 	// ********************************************** //
 
@@ -93,6 +116,11 @@ void scene_structure::display_frame()
 	// Set additional uniform parameters to the shader
 	environment.uniform_generic.uniform_vec3["light_color"] = gui.light_color;
 
+	//  Must be called before drawing the other shapes and without writing in the Depth Buffer
+	glDepthMask(GL_FALSE); // disable depth-buffer writing
+	draw(skybox, environment);
+	glDepthMask(GL_TRUE);  // re-activate depth-buffer write
+
 	// conditional display of the global frame (set via the GUI)
 	if (gui.display_frame)
 		draw(global_frame, environment);
@@ -111,6 +139,7 @@ void scene_structure::display_frame()
 	draw(ground_light, environment);
 
 	// Moto
+	// ********************************* //
 
 	float radius = 5.0f;
 	moto["Body"].transform_local.translation = 
