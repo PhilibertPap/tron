@@ -43,12 +43,18 @@ struct scene_structure : cgp::scene_inputs_generic {
 
 	cgp::hierarchy_mesh_drawable moto;
 
+	float L = 50.0f; // Longueur du Terrain
+	int N = 100; // nombre de subdivisions
+	cgp::mesh grille_mesh;
 	mesh_drawable grille;
+
 	mesh_drawable body;
 	mesh_drawable wheel;
+
 	cgp::mesh trail_mesh;
 	mesh_drawable trail;
-	mesh_drawable luminaire_mesh;
+	
+	mesh_drawable luminaire;
 
 	cgp::skybox_drawable skybox;
 

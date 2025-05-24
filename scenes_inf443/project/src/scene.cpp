@@ -11,14 +11,49 @@ void deform_terrain(mesh& m)
 	{
 		vec3& p = m.position[k];
 		float d2 = p.x*p.x + p.y * p.y;
-		float z = exp(-d2 / 4)-1;
+		float z = exp(-0.05 * d2 / 4)-1;
 
-		z = z + 0.05f*noise_perlin({ p.x,p.y });
+		z = z + 0.1f*noise_perlin({ p.x,p.y });
 
 		p = { p.x, p.y, z };
 	}
 
 	m.normal_update();
+}
+
+float get_grid_height(const mesh& grille_mesh, float L, int N, float x, float y)
+{
+    // Convertit (x, y) en indices de la grille
+    float fx = (x + L/2) / L * N;
+    float fy = (y + L/2) / L * N;
+    int ix = int(fx);
+    int iy = int(fy);
+
+    // Clamp pour rester dans la grille
+    ix = std::max(0, std::min(N-1, ix));
+    iy = std::max(0, std::min(N-1, iy));
+
+    // Indices des 4 sommets du carré local
+    int idx00 = ix     + iy     * (N+1);
+    int idx10 = (ix+1) + iy     * (N+1);
+    int idx01 = ix     + (iy+1) * (N+1);
+    int idx11 = (ix+1) + (iy+1) * (N+1);
+
+    // Coordonnées locales dans la cellule
+    float tx = fx - ix;
+    float ty = fy - iy;
+
+    // Interpolation bilinéaire des hauteurs
+    float z00 = grille_mesh.position[idx00].z;
+    float z10 = grille_mesh.position[idx10].z;
+    float z01 = grille_mesh.position[idx01].z;
+    float z11 = grille_mesh.position[idx11].z;
+
+    float z0 = (1-tx)*z00 + tx*z10;
+    float z1 = (1-tx)*z01 + tx*z11;
+    float z = (1-ty)*z0 + ty*z1;
+
+    return z;
 }
 
 // This function is called only once at the beginning of the program
@@ -46,10 +81,9 @@ void scene_structure::initialize()
 	// ********************************************** //
 
 	// Terrain sous forme de grille
-	float L = 50.0f; // Longueur du Terrain
-	int N = 100; // nombre de subdivisions
-	mesh grille_mesh = mesh_primitive_grid({ -L / 2,-L / 2,0 }, { L / 2,-L / 2,0 }, { L / 2,L / 2,0 }, { -L / 2,L / 2,0 }, N, N);
-	//deform_terrain(grille_mesh);
+	
+	grille_mesh = mesh_primitive_grid({ -L / 2,-L / 2,0 }, { L / 2,-L / 2,0 }, { L / 2,L / 2,0 }, { -L / 2,L / 2,0 }, N, N);
+	deform_terrain(grille_mesh);
 
 	float repeat = 20.0f;
 	grille_mesh.uv.clear();
@@ -91,6 +125,10 @@ void scene_structure::initialize()
 		img_front
 	);
 
+	// Luminaire
+
+	mesh luminaire_mesh = mesh_primitive_sphere(0.3f);
+
 	// Initialize data
 	// ********************************************** //
 
@@ -105,7 +143,7 @@ void scene_structure::initialize()
 
 	trail.initialize_data_on_gpu(trail_mesh);
 
-	luminaire_mesh.initialize_data_on_gpu(mesh_primitive_sphere(0.3f));
+	luminaire.initialize_data_on_gpu(luminaire_mesh);
 }
 
 
@@ -139,12 +177,11 @@ void scene_structure::display_frame()
 	// ********************************* //
 
 	float radius = 5.0f;
-	moto["Body"].transform_local.translation = 
-	{
-		radius * cos(2.0f * timer.t),
-		radius * sin(2.0f * timer.t),
-		0.8f 
-	};
+	float x = radius * cos(2.0f * timer.t);
+	float y = radius * sin(2.0f * timer.t);
+	float z = get_grid_height(grille_mesh, L, N, x, y) + 0.8f; // 0.8f = hauteur de la moto au-dessus du sol
+
+	moto["Body"].transform_local.translation = { x, y, z };
 	moto["Body"].transform_local.rotation = rotation_transform::from_axis_angle({ 0, 0, 1 }, 2.0f * timer.t + Pi / 2.0f);
 
 	float wheel_angle = 5.0f * timer.t;
