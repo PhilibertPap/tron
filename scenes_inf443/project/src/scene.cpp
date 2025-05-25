@@ -179,6 +179,13 @@ void scene_structure::initialize()
 
 	trail.initialize_data_on_gpu(trail_mesh);
 
+	body2.initialize_data_on_gpu(body_mesh);
+	moto2.add(body2, "Body", "Root");
+	moto2.add(wheel, "Wheel1", "Body", { 1.5f, 0.0f, 0.0f });
+	moto2.add(wheel, "Wheel2", "Body", { -1.5f, 0.0f, 0.0f });
+
+	trail2.initialize_data_on_gpu(mesh());
+
 	luminaire.initialize_data_on_gpu(luminaire_mesh);
 }
 
@@ -209,12 +216,13 @@ void scene_structure::display_frame()
 	// Grille
 	// ********************************* //
 
-	const int MAX_LIGHTS = 10; 
-	std::vector<vec3> sol_lights;
-	get_k_closest_lights(luminaire_positions, {0,0,0}, MAX_LIGHTS, sol_lights);
-	environment.uniform_generic.uniform_int["light_count"] = int(sol_lights.size());
-	for (int i = 0; i < sol_lights.size(); ++i)
-		environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = sol_lights[i];
+	const int MAX_LIGHTS = 10;
+
+	// --- Pour la grille : tous les premiers luminaires ---
+	int grille_light_count = std::min(MAX_LIGHTS, int(luminaire_positions.size()));
+	environment.uniform_generic.uniform_int["light_count"] = grille_light_count;
+	for (int i = 0; i < grille_light_count; ++i)
+		environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = luminaire_positions[i];
 	draw(grille, environment);
 
 	// Moto
@@ -264,16 +272,60 @@ void scene_structure::display_frame()
 
 	moto.update_local_to_global_coordinates();
 
-	// Effet des luminaires sur la moto
-
+	// --- Pour la moto : seulement les plus proches luminaires ---
 	std::vector<vec3> moto_lights;
 	vec3 moto_pos = moto["Body"].transform_local.translation;
-	get_k_closest_lights(luminaire_positions, moto_pos, 3, moto_lights);
+	get_k_closest_lights(luminaire_positions, moto_pos, MAX_LIGHTS, moto_lights);
 	environment.uniform_generic.uniform_int["light_count"] = int(moto_lights.size());
 	for (int i = 0; i < moto_lights.size(); ++i)
 		environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = moto_lights[i];
 	draw(moto, environment);
 
+	// --- Contrôle de la deuxième moto (ZQSD) ---
+	if (inputs.keyboard.is_pressed(GLFW_KEY_W)) { // avancer
+		moto2_speed += acceleration * dt;
+	}
+	if (inputs.keyboard.is_pressed(GLFW_KEY_S)) { // reculer
+		moto2_speed -= deceleration * dt;
+	}
+	if (inputs.keyboard.is_pressed(GLFW_KEY_A)) { // gauche
+		moto2_orientation += turn_speed * dt;
+	}
+	if (inputs.keyboard.is_pressed(GLFW_KEY_D)) { // droite
+		moto2_orientation -= turn_speed * dt;
+	}
+
+	if (moto2_speed > max_speed) moto2_speed = max_speed;
+	if (moto2_speed < 0.0f) moto2_speed = 0.0f;
+	if (std::abs(moto2_speed) < min_speed_threshold) moto2_speed = 0.0f;
+
+	vec2 direction2 = { std::cos(moto2_orientation), std::sin(moto2_orientation) };
+	float new_x2 = moto2_position.x + direction2.x * moto2_speed * dt;
+	float new_y2 = moto2_position.y + direction2.y * moto2_speed * dt;
+
+	moto2_position.x = new_x2;
+	moto2_position.y = new_y2;
+	moto2_position.z = get_grid_height(grille_mesh, L, N, new_x2, new_y2) + 0.8f;
+
+	moto2["Body"].transform_local.translation = moto2_position;
+	moto2["Body"].transform_local.rotation = rotation_transform::from_axis_angle({ 0, 0, 1 }, moto2_orientation);
+
+	float wheel_angle2 = 5.0f * timer.t;
+	rotation_transform wheel_orientation2 = rotation_transform::from_axis_angle({ 1,0,0 }, Pi / 2.0f);
+	rotation_transform wheel_spin2 = rotation_transform::from_axis_angle({ 0,0,1 }, wheel_angle2);
+	moto2["Wheel1"].transform_local.rotation = wheel_orientation2 * wheel_spin2;
+	moto2["Wheel2"].transform_local.rotation = wheel_orientation2 * wheel_spin2;
+
+	moto2.update_local_to_global_coordinates();
+
+	// --- Pour la deuxième moto : seulement les plus proches luminaires ---
+	std::vector<vec3> moto2_lights;
+	vec3 moto2_pos = moto2["Body"].transform_local.translation;
+	get_k_closest_lights(luminaire_positions, moto2_pos, MAX_LIGHTS, moto2_lights);
+	environment.uniform_generic.uniform_int["light_count"] = int(moto2_lights.size());
+	for (int i = 0; i < moto2_lights.size(); ++i)
+		environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = moto2_lights[i];
+	draw(moto2, environment);
 
 	// Trail
 	// ********************************* //
@@ -306,6 +358,32 @@ void scene_structure::display_frame()
 
 	draw(trail, environment);
 
+	vec3 rear_pos2 = moto2["Body"].transform_local.translation;
+	trail_positions2.push_back(rear_pos2);
+
+	if (trail_positions2.size() > max_trail_length)
+		trail_positions2.erase(trail_positions2.begin());
+
+	trail2.vbo_position.clear();
+
+	if (trail_positions2.size() >= 2) {
+		std::vector<vec3> filtered_positions2;
+		filtered_positions2.push_back(trail_positions2[0]);
+		for (size_t i = 1; i < trail_positions2.size(); ++i) {
+			if (norm(trail_positions2[i] - trail_positions2[i-1]) > 1e-5f) {
+				filtered_positions2.push_back(trail_positions2[i]);
+			}
+		}
+		trail_mesh = create_trail(filtered_positions2);
+	} else {
+		trail_mesh = mesh();
+	}
+	trail2.initialize_data_on_gpu(trail_mesh);
+
+	// Couleur rouge pour le trail2
+	trail2.material.color = {1.0f, 1.0f, 0.0f};
+	draw(trail2, environment);
+
 	// Trouver le luminaire le plus proche de la moto
 	vec3 current_pos = moto["Wheel2"].transform_local.translation;
 	float min_dist = 1e9f;
@@ -324,6 +402,65 @@ void scene_structure::display_frame()
 	environment.uniform_generic.uniform_int["light_count"] = int(luminaire_positions.size());
 	for (int i = 0; i < luminaire_positions.size(); ++i)
 		environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = luminaire_positions[i];
+
+	// --- Reset général si ESPACE ---
+	if (inputs.keyboard.is_pressed(GLFW_KEY_SPACE)) {
+	    // Reset complet des deux motos et des scores
+	    moto_position = {0.0f, 0.0f, 0.0f};
+	    moto2_position = {0, 5, 0};
+	    moto_speed = 0.0f;
+	    moto2_speed = 0.0f;
+	    trail_positions.clear();
+	    trail_positions2.clear();
+	    score_moto1 = 0;
+	    score_moto2 = 0;
+	    loser = 0;
+	}
+
+	// --- Collision detection ---
+	const float collision_radius = 0.6f;
+	bool collision_moto1_trail2 = false;
+	for(const vec3& p : trail_positions2) {
+	    if(norm(moto_position - p) < collision_radius) {
+	        collision_moto1_trail2 = true;
+	        break;
+	    }
+	}
+	bool collision_moto2_trail1 = false;
+	for(const vec3& p : trail_positions) {
+	    if(norm(moto2_position - p) < collision_radius) {
+	        collision_moto2_trail1 = true;
+	        break;
+	    }
+	}
+
+	// --- Reset automatique de la moto perdante ---
+	if (collision_moto1_trail2) {
+	    score_moto2++;
+	    loser = 1;
+	    moto_position = {0.0f, 0.0f, 0.0f};
+	    moto_speed = 0.0f;
+	    trail_positions.clear();
+	}
+	if (collision_moto2_trail1) {
+	    score_moto1++;
+	    loser = 2;
+	    moto2_position = {0, 5, 0};
+	    moto2_speed = 0.0f;
+	    trail_positions2.clear();
+	}
+
+	// --- Affichage du message de défaite ---
+	if (loser != 0) {
+	    ImGui::Begin("Score");
+	    if (loser == 1)
+	        ImGui::Text("La moto 1 a perdu ! Score : %d - %d", score_moto1, score_moto2);
+	    if (loser == 2)
+	        ImGui::Text("La moto 2 a perdu ! Score : %d - %d", score_moto1, score_moto2);
+	    ImGui::Text("Appuyez sur une touche pour continuer.");
+	    ImGui::End();
+	    return;
+	}
 
 	// Display Wireframe
 

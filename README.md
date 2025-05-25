@@ -45,6 +45,7 @@ Gestion des collisions:
 Moto:
 - Changer le style de la moto
 - Faire avancer sur un chemin prédéfini / au hasard / nous-mêmes
+- Nous avons fait en sorte d'utiliser deux motos qui avancent avec les touches du clavier
 
 Skybox:
 - Utilisation d'une image de galaxies

@@ -42,33 +42,49 @@ struct scene_structure : cgp::scene_inputs_generic {
 	timer_basic timer;
 
 	cgp::hierarchy_mesh_drawable moto;
+	hierarchy_mesh_drawable moto2;
+
+	mesh_drawable body;
+	mesh_drawable body2;
+	mesh_drawable wheel;
+	mesh_drawable wheel2;
 
 	float L = 100.0f; // Longueur du Terrain
 	int N = 200; // nombre de subdivisions
 	cgp::mesh grille_mesh;
 	mesh_drawable grille;
 
-	mesh_drawable body;
-	mesh_drawable wheel;
+
+	cgp::mesh trail_mesh;
+	int max_trail_length = 100;
+	mesh_drawable luminaire;
+	std::vector<vec3> luminaire_positions;
+	cgp::skybox_drawable skybox;
+
 	vec3 moto_position = { 0.0f, 0.0f, 0.0f };
+	vec3 moto2_position = { 0, 5, 0 }; // Position initiale différente
 	float moto_orientation = 0.0f; // angle en radians
+	float moto2_orientation = 0.0f;
 	float moto_speed = 0.0f;
+	float moto2_speed = 0.0f;
+
 	const float max_speed = 10.0f;
 	const float acceleration = 10.0f;
 	const float deceleration = 8.0f;
 	const float min_speed_threshold = 0.1f;
 	const float turn_speed = 2.0f;
 
-	cgp::mesh trail_mesh;
 	mesh_drawable trail;
-
-	cgp::skybox_drawable skybox;
-
+	mesh_drawable trail2;
 	std::vector<vec3> trail_positions;
-	int max_trail_length = 150;
+	std::vector<vec3> trail_positions2;
 
-	mesh_drawable luminaire;
-	std::vector<vec3> luminaire_positions;
+	bool game_over = false;
+
+	int score_moto1 = 0;
+	int score_moto2 = 0;
+	int loser = 0; // 0 = personne, 1 = moto1 a perdu, 2 = moto2 a perdu
+	
 
 	// ****************************** //
 	// Functions
