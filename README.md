@@ -21,12 +21,10 @@ Le jeu le plus emblématique issu de TRON est appelé "Light Cycle" :
 
 - Texture pour créer la grille: doit-on rajouter de la lumière?
 - Voiture qui éclaire le sol avec sa couleur 
-- Collisions
 - Faire des étages + passerelles + gestion des chutes
 - Moto qui se penche quand on tourne
-- Skybox
 
-Pour le muret:
+Trail:
 - Mesh unité = 2 triangles
 - Discrétiser pour les courbes
 - version force brute: clear() + réinitialisation du mesh -> fait
@@ -50,3 +48,8 @@ Moto:
 Skybox:
 - Utilisation d'une image de galaxies
 - Problème d'orientation pour d'autres images, mais celle-ci n'en a pas vraiment donc ok
+
+Collisions et fin du jeu:
+- GUI
+- Prise en compte des collisions : ok
+- Appuyer sur espace pour reset complètement

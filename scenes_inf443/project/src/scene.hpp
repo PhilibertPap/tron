@@ -60,7 +60,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 
 	// Trail
 	cgp::mesh trail_mesh;
-	int max_trail_length = 100;
+	int max_trail_length = 150;
 	mesh_drawable trail;
 	mesh_drawable trail2;
 	std::vector<vec3> trail_positions;

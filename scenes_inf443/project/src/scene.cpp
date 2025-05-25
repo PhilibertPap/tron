@@ -125,14 +125,14 @@ void scene_structure::initialize()
 	}
 
 	// Placement des luminaires
-	luminaire_positions.clear();
-	for (int ix = 0; ix <= N; ++ix) {
-		for (int iy = 0; iy <= N; ++iy) {
-			float x = -L/2 + ix * (L / N);
-			float y = -L/2 + iy * (L / N);
-			float z = get_grid_height(grille_mesh, L, N, x, y) + 0.5f;
-			luminaire_positions.push_back({x, y, z});
-		}
+	int light_step = 10; // espace les lumières tous les 10 points de la grille
+	for (int ix = 0; ix <= N; ix += light_step) {
+	    for (int iy = 0; iy <= N; iy += light_step) {
+	        float x = -L/2 + ix * (L / N);
+	        float y = -L/2 + iy * (L / N);
+	        float z = get_grid_height(grille_mesh, L, N, x, y) + 0.5f;
+	        luminaire_positions.push_back({x, y, z});
+	    }
 	}
 
 	// Moto
