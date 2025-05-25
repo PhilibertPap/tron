@@ -191,7 +191,7 @@ void scene_structure::display_frame()
 		draw(global_frame, environment);
 	
 	// Update time
-	timer.update();
+	float dt = timer.update() * timer.scale;
 
 	// Draw all the shapes
 
@@ -206,14 +206,43 @@ void scene_structure::display_frame()
 	// Moto
 	// ********************************* //
 
-	float radius = 5.0f;
-	float x = radius * cos(2.0f * timer.t);
-	float y = radius * sin(2.0f * timer.t);
-	float z = get_grid_height(grille_mesh, L, N, x, y) + 0.8f; // 0.8f = hauteur de la moto au-dessus du sol
+	std::cout << "dt: " << dt << std::endl;
 
-	moto["Body"].transform_local.translation = { x, y, z };
-	moto["Body"].transform_local.rotation = rotation_transform::from_axis_angle({ 0, 0, 1 }, 2.0f * timer.t + Pi / 2.0f);
+	// Gestion du clavier
+	if (inputs.keyboard.is_pressed(GLFW_KEY_UP)) {
+		moto_speed += acceleration * dt;
+	}
+	if (inputs.keyboard.is_pressed(GLFW_KEY_DOWN)) {
+		moto_speed -= deceleration * dt;
+	}
+	if (inputs.keyboard.is_pressed(GLFW_KEY_LEFT)) {
+		moto_orientation += turn_speed * dt;
+	}
+	if (inputs.keyboard.is_pressed(GLFW_KEY_RIGHT)) {
+		moto_orientation -= turn_speed * dt;
+	}
 
+	// Clamp la vitesse
+	if (moto_speed > max_speed) moto_speed = max_speed;
+	if (moto_speed < 0.0f) moto_speed = 0.0f; // Empêche la marche arrière
+
+	// Seuil minimal pour arrêter la moto
+	if (std::abs(moto_speed) < min_speed_threshold) moto_speed = 0.0f;
+
+	// Mise à jour de la position
+	vec2 direction = { std::cos(moto_orientation), std::sin(moto_orientation) };
+	moto_position.x += direction.x * moto_speed * dt;
+	moto_position.y += direction.y * moto_speed * dt;
+	moto_position.z = get_grid_height(grille_mesh, L, N, moto_position.x, moto_position.y) + 0.8f;
+
+	std::cout << "moto_speed: " << moto_speed << std::endl;
+	std::cout << "moto_position: " << moto_position << std::endl;
+
+	// Application à la moto
+	moto["Body"].transform_local.translation = moto_position;
+	moto["Body"].transform_local.rotation = rotation_transform::from_axis_angle({ 0, 0, 1 }, moto_orientation);
+
+	// Roues
 	float wheel_angle = 5.0f * timer.t;
 	rotation_transform wheel_orientation = rotation_transform::from_axis_angle({ 1,0,0 }, Pi / 2.0f);
 	rotation_transform wheel_spin = rotation_transform::from_axis_angle({ 0,0,1 }, wheel_angle);
@@ -221,6 +250,8 @@ void scene_structure::display_frame()
 	moto["Wheel2"].transform_local.rotation = wheel_orientation * wheel_spin;
 
 	moto.update_local_to_global_coordinates();
+
+	// Effet des luminaires sur la moto
 
 	std::vector<vec3> moto_lights;
 	vec3 moto_pos = moto["Body"].transform_local.translation;
@@ -236,14 +267,26 @@ void scene_structure::display_frame()
 	vec3 rear_pos = moto["Body"].transform_local.translation;
 	trail_positions.push_back(rear_pos);
 
-	if (trail_positions.size() > 100) // Taille max du trail
+	if (trail_positions.size() > max_trail_length) // Taille max du trail
 	{
 		trail_positions.erase(trail_positions.begin());
 	}
 
 	trail.vbo_position.clear();
-	
-	trail_mesh = create_trail(trail_positions);
+
+	if (trail_positions.size() >= 2) {
+		// Supprimer les points consécutifs trop proches
+		std::vector<vec3> filtered_positions;
+		filtered_positions.push_back(trail_positions[0]);
+		for (size_t i = 1; i < trail_positions.size(); ++i) {
+			if (norm(trail_positions[i] - trail_positions[i-1]) > 1e-5f) {
+				filtered_positions.push_back(trail_positions[i]);
+			}
+		}
+		trail_mesh = create_trail(filtered_positions);
+	} else {
+		trail_mesh = mesh();
+	}
 
 	trail.initialize_data_on_gpu(trail_mesh);
 
@@ -277,7 +320,6 @@ void scene_structure::display_gui()
 {
 	ImGui::Checkbox("Frame", &gui.display_frame);
 	ImGui::Checkbox("Wireframe", &gui.display_wireframe);
-	
 	ImGui::ColorEdit3("Light color", &gui.light_color[0]);
 }
 
@@ -294,10 +336,29 @@ void scene_structure::mouse_click_event()
 
 void scene_structure::keyboard_event()
 {
-	camera_control.action_keyboard(environment.camera_view);
+	//camera_control.action_keyboard(environment.camera_view);
 }
 
 void scene_structure::idle_frame()
 {
-	camera_control.idle_frame(environment.camera_view);
+    // Sauvegarde l'état des flèches
+    bool left = inputs.keyboard.left;
+    bool right = inputs.keyboard.right;
+    bool up = inputs.keyboard.up;
+    bool down = inputs.keyboard.down;
+
+    // Désactive les flèches pour la caméra
+    inputs.keyboard.left = false;
+    inputs.keyboard.right = false;
+    inputs.keyboard.up = false;
+    inputs.keyboard.down = false;
+
+    // Appelle le comportement caméra sans les flèches
+    camera_control.idle_frame(environment.camera_view);
+
+    // Restaure l'état des flèches
+    inputs.keyboard.left = left;
+    inputs.keyboard.right = right;
+    inputs.keyboard.up = up;
+    inputs.keyboard.down = down;
 }

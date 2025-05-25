@@ -17,7 +17,7 @@ struct gui_parameters {
 	bool display_frame = true;
 	bool display_wireframe = false;
 
-	vec3 light_color = { 1,1,1 };
+	vec3 light_color = { 0,1,1 };
 };
 
 // The structure of the custom scene
@@ -50,6 +50,14 @@ struct scene_structure : cgp::scene_inputs_generic {
 
 	mesh_drawable body;
 	mesh_drawable wheel;
+	vec3 moto_position = { 0.0f, 0.0f, 0.0f };
+	float moto_orientation = 0.0f; // angle en radians
+	float moto_speed = 0.0f;
+	const float max_speed = 10.0f;
+	const float acceleration = 10.0f;
+	const float deceleration = 8.0f;
+	const float min_speed_threshold = 0.1f;
+	const float turn_speed = 2.0f;
 
 	cgp::mesh trail_mesh;
 	mesh_drawable trail;
@@ -59,7 +67,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	cgp::skybox_drawable skybox;
 
 	std::vector<vec3> trail_positions;
-	int max_trail_length = 100;
+	int max_trail_length = 150;
 
 	std::vector<vec3> luminaire_positions;
 
