@@ -206,8 +206,6 @@ void scene_structure::display_frame()
 	// Moto
 	// ********************************* //
 
-	std::cout << "dt: " << dt << std::endl;
-
 	// Gestion du clavier
 	if (inputs.keyboard.is_pressed(GLFW_KEY_UP)) {
 		moto_speed += acceleration * dt;
@@ -229,14 +227,15 @@ void scene_structure::display_frame()
 	// Seuil minimal pour arrêter la moto
 	if (std::abs(moto_speed) < min_speed_threshold) moto_speed = 0.0f;
 
-	// Mise à jour de la position
+	// Calcul de la nouvelle position x/y
 	vec2 direction = { std::cos(moto_orientation), std::sin(moto_orientation) };
-	moto_position.x += direction.x * moto_speed * dt;
-	moto_position.y += direction.y * moto_speed * dt;
-	moto_position.z = get_grid_height(grille_mesh, L, N, moto_position.x, moto_position.y) + 0.8f;
+	float new_x = moto_position.x + direction.x * moto_speed * dt;
+	float new_y = moto_position.y + direction.y * moto_speed * dt;
 
-	std::cout << "moto_speed: " << moto_speed << std::endl;
-	std::cout << "moto_position: " << moto_position << std::endl;
+	// Met à jour la position de la moto
+	moto_position.x = new_x;
+	moto_position.y = new_y;
+	moto_position.z = get_grid_height(grille_mesh, L, N, new_x, new_y) + 0.8f;
 
 	// Application à la moto
 	moto["Body"].transform_local.translation = moto_position;
