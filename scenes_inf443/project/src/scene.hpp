@@ -49,18 +49,24 @@ struct scene_structure : cgp::scene_inputs_generic {
 	mesh_drawable wheel;
 	mesh_drawable wheel2;
 
+	// Terrain
 	float L = 100.0f; // Longueur du Terrain
 	int N = 200; // nombre de subdivisions
 	cgp::mesh grille_mesh;
 	mesh_drawable grille;
-
-
-	cgp::mesh trail_mesh;
-	int max_trail_length = 100;
 	mesh_drawable luminaire;
 	std::vector<vec3> luminaire_positions;
 	cgp::skybox_drawable skybox;
 
+	// Trail
+	cgp::mesh trail_mesh;
+	int max_trail_length = 100;
+	mesh_drawable trail;
+	mesh_drawable trail2;
+	std::vector<vec3> trail_positions;
+	std::vector<vec3> trail_positions2;
+
+	// Moto
 	vec3 moto_position = { 0.0f, 0.0f, 0.0f };
 	vec3 moto2_position = { 0, 5, 0 }; // Position initiale différente
 	float moto_orientation = 0.0f; // angle en radians
@@ -74,11 +80,24 @@ struct scene_structure : cgp::scene_inputs_generic {
 	const float min_speed_threshold = 0.1f;
 	const float turn_speed = 2.0f;
 
-	mesh_drawable trail;
-	mesh_drawable trail2;
-	std::vector<vec3> trail_positions;
-	std::vector<vec3> trail_positions2;
 
+	// Booster
+	std::vector<vec3> booster_positions;
+	float booster_radius = 2.0f; // rayon de détection du booster
+	float booster_value = 5.0f;  // valeur d'accélération instantanée
+	float booster_spawn_timer = 0.0f;
+	float booster_spawn_interval = 5.0f; // un booster toutes les 5 secondes
+
+	const int MAX_BOOSTERS = 5;
+
+	float moto_boost_timer = 0.0f;
+	float moto2_boost_timer = 0.0f;
+	const float boost_duration = 2.0f; // secondes
+	const float boost_max_speed = 20.0f; // vitesse max pendant le boost
+
+	mesh_drawable booster;
+
+	// Etat du jeu
 	bool game_over = false;
 
 	int score_moto1 = 0;

@@ -100,7 +100,7 @@ void scene_structure::initialize()
 	camera_control.set_rotation_axis_z(); // camera rotates around z-axis
 	//   look_at(camera_position, targeted_point, up_direction)
 	camera_control.look_at(
-		{ -20.0f, 0.0f, 15.0f }, // position caméra (plus haut et derrière)
+		{ -20.0f, 0.0f, 50.0f }, // position caméra (plus haut et derrière)
 		{ 0.0f, 0.0f, 0.0f },  // cible (la moto au centre)
 		{ 0.0f, 0.0f, 1.0f }   // up
 	);
@@ -187,6 +187,9 @@ void scene_structure::initialize()
 	trail2.initialize_data_on_gpu(mesh());
 
 	luminaire.initialize_data_on_gpu(luminaire_mesh);
+
+	booster.initialize_data_on_gpu(mesh_primitive_sphere(booster_radius));
+	booster.material.color = { 1, 0.5f, 0 };
 }
 
 
@@ -220,9 +223,6 @@ void scene_structure::display_frame()
 
 	// --- Pour la grille : tous les premiers luminaires ---
 	int grille_light_count = std::min(MAX_LIGHTS, int(luminaire_positions.size()));
-	environment.uniform_generic.uniform_int["light_count"] = grille_light_count;
-	for (int i = 0; i < grille_light_count; ++i)
-		environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = luminaire_positions[i];
 	draw(grille, environment);
 
 	// Moto
@@ -243,7 +243,8 @@ void scene_structure::display_frame()
 	}
 
 	// Clamp la vitesse
-	if (moto_speed > max_speed) moto_speed = max_speed;
+	float moto_max = (moto_boost_timer > 0.0f) ? boost_max_speed : max_speed;
+	if (moto_speed > moto_max) moto_speed = moto_max;
 	if (moto_speed < 0.0f) moto_speed = 0.0f; // Empêche la marche arrière
 
 	// Seuil minimal pour arrêter la moto
@@ -276,9 +277,10 @@ void scene_structure::display_frame()
 	std::vector<vec3> moto_lights;
 	vec3 moto_pos = moto["Body"].transform_local.translation;
 	get_k_closest_lights(luminaire_positions, moto_pos, MAX_LIGHTS, moto_lights);
+	// Passer SEULEMENT les plus proches luminaires au shader
 	environment.uniform_generic.uniform_int["light_count"] = int(moto_lights.size());
 	for (int i = 0; i < moto_lights.size(); ++i)
-		environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = moto_lights[i];
+	    environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = moto_lights[i];
 	draw(moto, environment);
 
 	// --- Contrôle de la deuxième moto (ZQSD) ---
@@ -295,7 +297,8 @@ void scene_structure::display_frame()
 		moto2_orientation -= turn_speed * dt;
 	}
 
-	if (moto2_speed > max_speed) moto2_speed = max_speed;
+	float moto2_max = (moto2_boost_timer > 0.0f) ? boost_max_speed : max_speed;
+	if (moto2_speed > moto2_max) moto2_speed = moto2_max;
 	if (moto2_speed < 0.0f) moto2_speed = 0.0f;
 	if (std::abs(moto2_speed) < min_speed_threshold) moto2_speed = 0.0f;
 
@@ -380,9 +383,53 @@ void scene_structure::display_frame()
 	}
 	trail2.initialize_data_on_gpu(trail_mesh);
 
-	// Couleur rouge pour le trail2
+	// Couleur verte pour le trail2
 	trail2.material.color = {1.0f, 1.0f, 0.0f};
 	draw(trail2, environment);
+
+	// Boosters
+	// ********************************* //
+
+	// Apparition automatique de boosters
+	booster_spawn_timer += dt;
+	if (booster_spawn_timer > booster_spawn_interval) {
+	    booster_spawn_timer = 0.0f;
+	    if (booster_positions.size() < MAX_BOOSTERS) {
+	        // Position aléatoire sur le terrain
+	        float bx = -L/2 + static_cast<float>(rand())/RAND_MAX * L;
+	        float by = -L/2 + static_cast<float>(rand())/RAND_MAX * L;
+	        float bz = get_grid_height(grille_mesh, L, N, bx, by) + 1.0f;
+	        booster_positions.push_back({bx, by, bz});
+	    }
+	}
+
+	// Pour la moto 1
+	for (auto it = booster_positions.begin(); it != booster_positions.end(); ) {
+	    if (norm(moto_position - *it) < booster_radius) {
+	        moto_boost_timer = boost_duration;
+	        it = booster_positions.erase(it);
+	    } else {
+	        ++it;
+	    }
+	}
+	// Pour la moto 2
+	for (auto it = booster_positions.begin(); it != booster_positions.end(); ) {
+	    if (norm(moto2_position - *it) < booster_radius) {
+	        moto2_boost_timer = boost_duration;
+	        it = booster_positions.erase(it);
+	    } else {
+	        ++it;
+	    }
+	}
+
+	// Dessiner les boosters
+	for(const vec3& pos : booster_positions) {
+	    booster.model.translation = pos;
+	    draw(booster, environment);
+	}
+
+	// Luminaires
+	// ********************************* //
 
 	// Trouver le luminaire le plus proche de la moto
 	vec3 current_pos = moto["Wheel2"].transform_local.translation;
@@ -398,11 +445,6 @@ void scene_structure::display_frame()
 	// Passer la position au shader
 	environment.uniform_generic.uniform_vec3["local_light"] = closest_light;
 
-	// Passer toutes les positions des luminaires au shader
-	environment.uniform_generic.uniform_int["light_count"] = int(luminaire_positions.size());
-	for (int i = 0; i < luminaire_positions.size(); ++i)
-		environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = luminaire_positions[i];
-
 	// --- Reset général si ESPACE ---
 	if (inputs.keyboard.is_pressed(GLFW_KEY_SPACE)) {
 	    // Reset complet des deux motos et des scores
@@ -410,11 +452,14 @@ void scene_structure::display_frame()
 	    moto2_position = {0, 5, 0};
 	    moto_speed = 0.0f;
 	    moto2_speed = 0.0f;
+	    moto_orientation = 0.0f;
+	    moto2_orientation = 0.0f;
 	    trail_positions.clear();
 	    trail_positions2.clear();
 	    score_moto1 = 0;
 	    score_moto2 = 0;
 	    loser = 0;
+	    booster_positions.clear(); // Ajout : réinitialise les boosters
 	}
 
 	// --- Collision detection ---
@@ -440,6 +485,7 @@ void scene_structure::display_frame()
 	    loser = 1;
 	    moto_position = {0.0f, 0.0f, 0.0f};
 	    moto_speed = 0.0f;
+	    moto_orientation = 0.0f;
 	    trail_positions.clear();
 	}
 	if (collision_moto2_trail1) {
@@ -447,6 +493,7 @@ void scene_structure::display_frame()
 	    loser = 2;
 	    moto2_position = {0, 5, 0};
 	    moto2_speed = 0.0f;
+	    moto2_orientation = 0.0f;
 	    trail_positions2.clear();
 	}
 
@@ -461,6 +508,10 @@ void scene_structure::display_frame()
 	    ImGui::End();
 	    return;
 	}
+
+	// --- Boost Timer Update ---
+	if (moto_boost_timer > 0.0f) moto_boost_timer -= dt;
+	if (moto2_boost_timer > 0.0f) moto2_boost_timer -= dt;
 
 	// Display Wireframe
 
