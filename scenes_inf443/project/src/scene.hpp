@@ -74,7 +74,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	float moto_speed = 0.0f;
 	float moto2_speed = 0.0f;
 
-	const float max_speed = 10.0f;
+	const float max_speed = 20.0f;
 	const float acceleration = 10.0f;
 	const float deceleration = 8.0f;
 	const float min_speed_threshold = 0.1f;

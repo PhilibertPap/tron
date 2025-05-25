@@ -100,7 +100,7 @@ void scene_structure::initialize()
 	camera_control.set_rotation_axis_z(); // camera rotates around z-axis
 	//   look_at(camera_position, targeted_point, up_direction)
 	camera_control.look_at(
-		{ -20.0f, 0.0f, 50.0f }, // position caméra (plus haut et derrière)
+		{ -50.0f, 0.0f, 100.0f }, // position caméra (plus haut et derrière)
 		{ 0.0f, 0.0f, 0.0f },  // cible (la moto au centre)
 		{ 0.0f, 0.0f, 1.0f }   // up
 	);
@@ -116,7 +116,7 @@ void scene_structure::initialize()
 	// Terrain sous forme de grille
 	
 	grille_mesh = mesh_primitive_grid({ -L / 2,-L / 2,0 }, { L / 2,-L / 2,0 }, { L / 2,L / 2,0 }, { -L / 2,L / 2,0 }, N, N);
-	deform_terrain(grille_mesh);
+	//deform_terrain(grille_mesh);
 
 	float repeat = 20.0f;
 	grille_mesh.uv.clear();
