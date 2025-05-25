@@ -28,7 +28,7 @@ layout(location=0) out vec4 FragColor;
 // Uniform values that must be send from the C++ code
 // ***************************************************** //
 
-#define MAX_LIGHTS 8
+#define MAX_LIGHTS 10
 uniform int light_count;
 uniform vec3 local_lights[MAX_LIGHTS];
 

@@ -61,14 +61,13 @@ struct scene_structure : cgp::scene_inputs_generic {
 
 	cgp::mesh trail_mesh;
 	mesh_drawable trail;
-	
-	mesh_drawable luminaire;
 
 	cgp::skybox_drawable skybox;
 
 	std::vector<vec3> trail_positions;
 	int max_trail_length = 150;
 
+	mesh_drawable luminaire;
 	std::vector<vec3> luminaire_positions;
 
 	// ****************************** //

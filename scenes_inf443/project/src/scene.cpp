@@ -34,10 +34,19 @@ float get_grid_height(const mesh& grille_mesh, float L, int N, float x, float y)
     iy = std::max(0, std::min(N-1, iy));
 
     // Indices des 4 sommets du carré local
-    int idx00 = ix     + iy     * (N+1);
-    int idx10 = (ix+1) + iy     * (N+1);
-    int idx01 = ix     + (iy+1) * (N+1);
-    int idx11 = (ix+1) + (iy+1) * (N+1);
+    int grid_size = N + 1;
+    int idx00 = ix     + iy     * grid_size;
+    int idx10 = (ix+1) + iy     * grid_size;
+    int idx01 = ix     + (iy+1) * grid_size;
+    int idx11 = (ix+1) + (iy+1) * grid_size;
+
+    // Vérification des bornes
+    int max_index = static_cast<int>(grille_mesh.position.size()) - 1;
+    if (idx00 > max_index || idx10 > max_index || idx01 > max_index || idx11 > max_index ||
+        idx00 < 0 || idx10 < 0 || idx01 < 0 || idx11 < 0) {
+        // Retourne une valeur par défaut ou lève une exception selon le besoin
+        return 0.0f;
+    }
 
     // Coordonnées locales dans la cellule
     float tx = fx - ix;
@@ -91,9 +100,10 @@ void scene_structure::initialize()
 	camera_control.set_rotation_axis_z(); // camera rotates around z-axis
 	//   look_at(camera_position, targeted_point, up_direction)
 	camera_control.look_at(
-		{ 5.0f, -4.0f, 3.5f } /* position of the camera in the 3D scene */,
-		{0,0,0} /* targeted point in 3D scene */,
-		{0,0,1} /* direction of the "up" vector */);
+		{ -20.0f, 0.0f, 15.0f }, // position caméra (plus haut et derrière)
+		{ 0.0f, 0.0f, 0.0f },  // cible (la moto au centre)
+		{ 0.0f, 0.0f, 1.0f }   // up
+	);
 
 
 	// Create the global (x,y,z) frame
@@ -115,10 +125,13 @@ void scene_structure::initialize()
 	}
 
 	// Placement des luminaires
-	float interval = 10.0f;
-	for (float x = -L/2; x <= L/2; x += interval) {
-		for (float y = -L/2; y <= L/2; y += interval) {
-			luminaire_positions.push_back({x, y, 1.0f}); // 1.0f = hauteur du luminaire
+	luminaire_positions.clear();
+	for (int ix = 0; ix <= N; ++ix) {
+		for (int iy = 0; iy <= N; ++iy) {
+			float x = -L/2 + ix * (L / N);
+			float y = -L/2 + iy * (L / N);
+			float z = get_grid_height(grille_mesh, L, N, x, y) + 0.5f;
+			luminaire_positions.push_back({x, y, z});
 		}
 	}
 
@@ -193,9 +206,10 @@ void scene_structure::display_frame()
 	// Update time
 	float dt = timer.update() * timer.scale;
 
-	// Draw all the shapes
+	// Grille
+	// ********************************* //
 
-	const int MAX_LIGHTS = 9;
+	const int MAX_LIGHTS = 10; 
 	std::vector<vec3> sol_lights;
 	get_k_closest_lights(luminaire_positions, {0,0,0}, MAX_LIGHTS, sol_lights);
 	environment.uniform_generic.uniform_int["light_count"] = int(sol_lights.size());
@@ -261,7 +275,8 @@ void scene_structure::display_frame()
 	draw(moto, environment);
 
 
-	// Trail positions
+	// Trail
+	// ********************************* //
 
 	vec3 rear_pos = moto["Body"].transform_local.translation;
 	trail_positions.push_back(rear_pos);
@@ -304,6 +319,11 @@ void scene_structure::display_frame()
 	}
 	// Passer la position au shader
 	environment.uniform_generic.uniform_vec3["local_light"] = closest_light;
+
+	// Passer toutes les positions des luminaires au shader
+	environment.uniform_generic.uniform_int["light_count"] = int(luminaire_positions.size());
+	for (int i = 0; i < luminaire_positions.size(); ++i)
+		environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = luminaire_positions[i];
 
 	// Display Wireframe
 
