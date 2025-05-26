@@ -65,21 +65,25 @@ struct scene_structure : cgp::scene_inputs_generic {
 	mesh_drawable trail2;
 	std::vector<vec3> trail_positions;
 	std::vector<vec3> trail_positions2;
+	vec3 trail_color = { 0.0f, 1.0f, 1.0f }; 
+	vec3 trail2_color = { 1.0f, 1.0f, 0.0f };
 
 	// Moto
-	vec3 moto_position = { 0.0f, 0.0f, 0.0f };
-	vec3 moto2_position = { 0, 5, 0 }; // Position initiale différente
-	float moto_orientation = 0.0f; // angle en radians
-	float moto2_orientation = 0.0f;
+	vec3 moto_position = { 0.0f,  -L / 2 + 3.0f, 0.8f };
+	vec3 moto2_position = { 0.0f, L / 2 - 3.0f, 0.8f };
+	float moto_orientation = cgp::Pi / 2; // angle en radians
+	float moto2_orientation = - cgp::Pi / 2;
 	float moto_speed = 0.0f;
 	float moto2_speed = 0.0f;
 
-	const float max_speed = 20.0f;
+	const float max_speed = 25.0f;
 	const float acceleration = 10.0f;
 	const float deceleration = 8.0f;
 	const float min_speed_threshold = 0.1f;
-	const float turn_speed = 2.0f;
+	const float turn_speed = 3.0f;
 
+	std::vector<vec3> moto_lights; // Liste des lumières les plus proches pour la moto 1
+	std::vector<vec3> moto2_lights; // Liste des lumières les plus proches pour la moto 2
 
 	// Booster
 	std::vector<vec3> booster_positions;
@@ -93,7 +97,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	float moto_boost_timer = 0.0f;
 	float moto2_boost_timer = 0.0f;
 	const float boost_duration = 2.0f; // secondes
-	const float boost_max_speed = 20.0f; // vitesse max pendant le boost
+	const float boost_max_speed = 50.0f; // vitesse max pendant le boost
 
 	mesh_drawable booster;
 

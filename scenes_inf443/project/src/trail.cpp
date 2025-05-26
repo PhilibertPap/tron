@@ -2,7 +2,7 @@
 
 using namespace cgp;
 
-mesh create_trail(const std::vector<vec3>& positions)
+mesh create_trail(const std::vector<vec3>& positions, vec3& trail_color)
 {
     mesh trail_mesh;
     int N = positions.size();
@@ -46,7 +46,7 @@ mesh create_trail(const std::vector<vec3>& positions)
         }
     }
     for (vec3 const& p : trail_mesh.position) {
-        trail_mesh.color.push_back({ 0.0f, 0.8f, 1.0f });
+        trail_mesh.color.push_back(trail_color);
     }
     for (size_t i = 0; i < trail_mesh.position.size(); ++i) {
         trail_mesh.uv.push_back({ 0.0f, 0.0f });

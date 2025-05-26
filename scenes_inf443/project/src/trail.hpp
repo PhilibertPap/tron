@@ -3,4 +3,4 @@
 #include "cgp/cgp.hpp"
 using namespace cgp;
 
-mesh create_trail(const std::vector<vec3>& positions);
+mesh create_trail(const std::vector<vec3>& positions, vec3& trail_color);

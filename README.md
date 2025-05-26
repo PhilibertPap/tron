@@ -29,16 +29,26 @@ Trail:
 - Discrétiser pour les courbes
 - version force brute: clear() + réinitialisation du mesh -> fait
 - belle version: Créer un Mesh de taille fixe + update, pré-allouer une taille fixe de sommets + connectivités (modulo la taille)
-- Améliorer le mesh (couleur, lumière etc)
+- Améliorer le mesh (surtout la couleur, lumière etc)
 
 Lumières sur le sol:
 - Disposées à intervalles réguliers (à chaque coin de quadrangle)
-- Initialiser l'effet qu'elles ont sur le sol à côté
-- Utiliser les N plus proches pour l'effet sur la moto
+- Initialiser l'effet qu'elles ont sur le sol à côté (toujours pas fait)
+- Utiliser les N plus proches pour l'effet sur la moto 
+-> Problème avec la moto 1 : on ne ovit pas les lumières s'allumer quand elle passe
 
 Gestion des collisions:
 - Avec n'importe quel muret
 - Dès que la moto touche le muret, elle disparait ou la simulation s'arrête
+
+Boosters:
+- Disparaissent lorsqu'on les touche
+- Apparaissent aléatoirement sur la grille (pas plus de 5 boosters)
+- Pourquoi pas ajouter des particules lorsuq'ils disparaissent
+
+Gestion des sorties de terrain:
+- Chute libre lorsque la moto sort du terrain
+- Si elle tombe en dehors de la grille: reset et l'adversaire gagne un point
 
 Moto:
 - Changer le style de la moto

@@ -171,8 +171,9 @@ void scene_structure::initialize()
 	grille.initialize_data_on_gpu(grille_mesh);
 	grille.texture.load_and_initialize_texture_2d_on_gpu(project::path + "assets/grille.png", GL_REPEAT, GL_REPEAT);
 
-	body.initialize_data_on_gpu(body_mesh);
 	wheel.initialize_data_on_gpu(wheel_mesh);
+	
+	body.initialize_data_on_gpu(body_mesh);
 	moto.add(body, "Body", "Root");
 	moto.add(wheel, "Wheel1", "Body", { 1.5f, 0.0f, 0.0f });
 	moto.add(wheel, "Wheel2", "Body", { -1.5f, 0.0f, 0.0f });
@@ -189,7 +190,7 @@ void scene_structure::initialize()
 	luminaire.initialize_data_on_gpu(luminaire_mesh);
 
 	booster.initialize_data_on_gpu(mesh_primitive_sphere(booster_radius));
-	booster.material.color = { 1, 0.5f, 0 };
+	booster.material.color = { 1.0f, 0.0f, 1.0f };
 }
 
 
@@ -273,11 +274,8 @@ void scene_structure::display_frame()
 
 	moto.update_local_to_global_coordinates();
 
-	// --- Pour la moto : seulement les plus proches luminaires ---
-	std::vector<vec3> moto_lights;
-	vec3 moto_pos = moto["Body"].transform_local.translation;
-	get_k_closest_lights(luminaire_positions, moto_pos, MAX_LIGHTS, moto_lights);
-	// Passer SEULEMENT les plus proches luminaires au shader
+	// --- Pour la moto 1 ---
+	get_k_closest_lights(luminaire_positions, moto_position, MAX_LIGHTS, moto_lights);
 	environment.uniform_generic.uniform_int["light_count"] = int(moto_lights.size());
 	for (int i = 0; i < moto_lights.size(); ++i)
 	    environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = moto_lights[i];
@@ -321,10 +319,8 @@ void scene_structure::display_frame()
 
 	moto2.update_local_to_global_coordinates();
 
-	// --- Pour la deuxième moto : seulement les plus proches luminaires ---
-	std::vector<vec3> moto2_lights;
-	vec3 moto2_pos = moto2["Body"].transform_local.translation;
-	get_k_closest_lights(luminaire_positions, moto2_pos, MAX_LIGHTS, moto2_lights);
+	// --- Pour la moto 2 ---
+	get_k_closest_lights(luminaire_positions, moto2_position, MAX_LIGHTS, moto2_lights);
 	environment.uniform_generic.uniform_int["light_count"] = int(moto2_lights.size());
 	for (int i = 0; i < moto2_lights.size(); ++i)
 		environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = moto2_lights[i];
@@ -352,11 +348,11 @@ void scene_structure::display_frame()
 				filtered_positions.push_back(trail_positions[i]);
 			}
 		}
-		trail_mesh = create_trail(filtered_positions);
+		trail_mesh = create_trail(filtered_positions,trail_color);
 	} else {
 		trail_mesh = mesh();
 	}
-
+ 
 	trail.initialize_data_on_gpu(trail_mesh);
 
 	draw(trail, environment);
@@ -377,14 +373,13 @@ void scene_structure::display_frame()
 				filtered_positions2.push_back(trail_positions2[i]);
 			}
 		}
-		trail_mesh = create_trail(filtered_positions2);
+		trail_mesh = create_trail(filtered_positions2, trail2_color);
 	} else {
 		trail_mesh = mesh();
 	}
 	trail2.initialize_data_on_gpu(trail_mesh);
 
-	// Couleur verte pour le trail2
-	trail2.material.color = {1.0f, 1.0f, 0.0f};
+	/*trail2.material.color = {1.0f, 1.0f, 0.0f};*/
 	draw(trail2, environment);
 
 	// Boosters
@@ -448,12 +443,12 @@ void scene_structure::display_frame()
 	// --- Reset général si ESPACE ---
 	if (inputs.keyboard.is_pressed(GLFW_KEY_SPACE)) {
 	    // Reset complet des deux motos et des scores
-	    moto_position = {0.0f, 0.0f, 0.0f};
-	    moto2_position = {0, 5, 0};
+	    moto_position = { 0.0f,  -L / 2 + 3.0f, get_grid_height(grille_mesh, L, N, -L / 4, 0.0f) + 0.8f };
+	    moto_orientation = cgp::Pi / 2; 
+	    moto2_position = { 0.0f,  L / 2 - 3.0f, get_grid_height(grille_mesh, L, N, L / 4, 0.0f) + 0.8f };
+	    moto2_orientation = - cgp::Pi / 2; 
 	    moto_speed = 0.0f;
 	    moto2_speed = 0.0f;
-	    moto_orientation = 0.0f;
-	    moto2_orientation = 0.0f;
 	    trail_positions.clear();
 	    trail_positions2.clear();
 	    score_moto1 = 0;
@@ -483,17 +478,17 @@ void scene_structure::display_frame()
 	if (collision_moto1_trail2) {
 	    score_moto2++;
 	    loser = 1;
-	    moto_position = {0.0f, 0.0f, 0.0f};
+	    moto_position = { 0.0f,  -L / 2 + 3.0f, get_grid_height(grille_mesh, L, N, -L/4, 0.0f) + 0.8f };
 	    moto_speed = 0.0f;
-	    moto_orientation = 0.0f;
+	    moto_orientation = cgp::Pi / 2; 
 	    trail_positions.clear();
 	}
 	if (collision_moto2_trail1) {
 	    score_moto1++;
 	    loser = 2;
-	    moto2_position = {0, 5, 0};
+	    moto2_position = { 0.0f,  L / 2 - 3.0f, get_grid_height(grille_mesh, L, N, L/4, 0.0f) + 0.8f };
 	    moto2_speed = 0.0f;
-	    moto2_orientation = 0.0f;
+	    moto2_orientation = - cgp::Pi / 2;
 	    trail_positions2.clear();
 	}
 
