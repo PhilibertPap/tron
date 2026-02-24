@@ -496,9 +496,9 @@ void scene_structure::display_frame()
 	if (loser != 0) {
 	    ImGui::Begin("Score");
 	    if (loser == 1)
-	        ImGui::Text("La moto 1 a perdu ! Score : %d - %d", score_moto1, score_moto2);
+	        ImGui::Text("La moto bleue a perdu un point ! Score : %d - %d", score_moto1, score_moto2);
 	    if (loser == 2)
-	        ImGui::Text("La moto 2 a perdu ! Score : %d - %d", score_moto1, score_moto2);
+	        ImGui::Text("La moto verte a perdu un point ! Score : %d - %d", score_moto1, score_moto2);
 	    ImGui::Text("Appuyez sur une touche pour continuer.");
 	    ImGui::End();
 	    return;
