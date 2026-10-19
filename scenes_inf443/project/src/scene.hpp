@@ -1,126 +1,91 @@
 #pragma once
 
-
 #include "cgp/cgp.hpp"
 #include "environment.hpp"
 
+#include "bloom.hpp"
+#include "boosters.hpp"
+#include "explosions.hpp"
+#include "level.hpp"
+#include "player.hpp"
 
-// This definitions allow to use the structures: mesh, mesh_drawable, etc. without mentionning explicitly cgp::
-using cgp::mesh;
-using cgp::mesh_drawable;
-using cgp::vec3;
-using cgp::numarray;
-using cgp::timer_basic;
+#include <string>
+#include <vector>
 
-// Variables associated to the GUI (buttons, etc)
-struct gui_parameters {
-	bool display_frame = true;
-	bool display_wireframe = false;
+enum class game_state { title, countdown, playing, round_over, match_over };
 
-	vec3 light_color = { 0,1,1 };
+enum class camera_mode { overview, third_person, first_person };
+
+// Options réglables depuis l'écran titre
+struct game_options
+{
+	camera_mode camera = camera_mode::third_person;
+	int points_to_win = 5;
+	float wall_length = 120.0f;
+	bool bloom = true;
 };
 
-// The structure of the custom scene
-struct scene_structure : cgp::scene_inputs_generic {
-	
-	// ****************************** //
-	// Elements and shapes of the scene
-	// ****************************** //
-	camera_controller_orbit_euler camera_control;
-	camera_projection_perspective camera_projection;
+// Caméra qui suit une moto, avec un léger retard pour adoucir les virages
+struct follow_camera
+{
+	cgp::vec3 eye;
+	cgp::vec3 target;
+
+	void snap(player_structure const& player, camera_mode mode);
+	void update(player_structure const& player, camera_mode mode, float dt);
+	cgp::mat4 view_matrix() const;
+};
+
+struct scene_structure : cgp::scene_inputs_generic
+{
 	window_structure window;
+	input_devices inputs;
+	environment_structure environment;
+	camera_projection_perspective camera_projection;
+	camera_controller_orbit_euler camera_control; // vue globale, orientable à la souris
 
-	mesh_drawable global_frame;          // The standard global frame
-	environment_structure environment;   // Standard environment controler
-	input_devices inputs;                // Storage for inputs status (mouse, keyboard, window dimension)
-	gui_parameters gui;                  // Standard GUI element storage
-	
-	// ****************************** //
-	// Elements and shapes of the scene
-	// ****************************** //
+	game_options options;
+	game_state state = game_state::title;
+	float state_time = 0; // temps passé dans l'état courant
+	std::string round_message;
 
-	timer_basic timer;
+	level_structure level;
+	std::vector<player_structure> players;
+	std::vector<follow_camera> player_cameras;
+	booster_field boosters;
+	explosion_effects explosions;
+	bloom_effect bloom;
 
-	cgp::hierarchy_mesh_drawable moto;
-	hierarchy_mesh_drawable moto2;
+	cgp::opengl_shader_structure trail_shader;
+	cgp::opengl_shader_structure ground_shader;
 
-	mesh_drawable body;
-	mesh_drawable body2;
-	mesh_drawable wheel;
-	mesh_drawable wheel2;
+	cgp::timer_basic timer;
 
-	// Terrain
-	float L = 100.0f; // Longueur du Terrain
-	int N = 200; // nombre de subdivisions
-	cgp::mesh grille_mesh;
-	mesh_drawable grille;
-	mesh_drawable luminaire;
-	std::vector<vec3> luminaire_positions;
-	cgp::skybox_drawable skybox;
+	ImFont* text_font = nullptr;
+	ImFont* title_font = nullptr;
 
-	// Trail
-	cgp::mesh trail_mesh;
-	int max_trail_length = 150;
-	mesh_drawable trail;
-	mesh_drawable trail2;
-	std::vector<vec3> trail_positions;
-	std::vector<vec3> trail_positions2;
-	vec3 trail_color = { 0.0f, 1.0f, 1.0f }; 
-	vec3 trail2_color = { 1.0f, 1.0f, 0.0f };
-
-	// Moto
-	vec3 moto_position = { 0.0f,  -L / 2 + 3.0f, 0.8f };
-	vec3 moto2_position = { 0.0f, L / 2 - 3.0f, 0.8f };
-	float moto_orientation = cgp::Pi / 2; // angle en radians
-	float moto2_orientation = - cgp::Pi / 2;
-	float moto_speed = 0.0f;
-	float moto2_speed = 0.0f;
-
-	const float max_speed = 25.0f;
-	const float acceleration = 10.0f;
-	const float deceleration = 8.0f;
-	const float min_speed_threshold = 0.1f;
-	const float turn_speed = 3.0f;
-
-	std::vector<vec3> moto_lights; // Liste des lumières les plus proches pour la moto 1
-	std::vector<vec3> moto2_lights; // Liste des lumières les plus proches pour la moto 2
-
-	// Booster
-	std::vector<vec3> booster_positions;
-	float booster_radius = 2.0f; // rayon de détection du booster
-	float booster_value = 5.0f;  // valeur d'accélération instantanée
-	float booster_spawn_timer = 0.0f;
-	float booster_spawn_interval = 5.0f; // un booster toutes les 5 secondes
-
-	const int MAX_BOOSTERS = 5;
-
-	float moto_boost_timer = 0.0f;
-	float moto2_boost_timer = 0.0f;
-	const float boost_duration = 2.0f; // secondes
-	const float boost_max_speed = 50.0f; // vitesse max pendant le boost
-
-	mesh_drawable booster;
-
-	// Etat du jeu
-	bool game_over = false;
-
-	int score_moto1 = 0;
-	int score_moto2 = 0;
-	int loser = 0; // 0 = personne, 1 = moto1 a perdu, 2 = moto2 a perdu
-	
-
-	// ****************************** //
-	// Functions
-	// ****************************** //
-
-	void initialize();    // Standard initialization to be called before the animation loop
-	void display_frame(); // The frame display to be called within the animation loop
-	void display_gui();   // The display of the GUI, also called within the animation loop
-
+	void initialize();
+	void display_frame();
+	void display_gui();
 
 	void mouse_move_event();
-	void mouse_click_event();
 	void keyboard_event();
-	void idle_frame();
 
+private:
+	void set_state(game_state new_state);
+	void start_match();
+	void start_round();
+
+	void update(float dt);
+	void update_riders(float dt);
+	void detect_collisions();
+	void check_end_of_round();
+
+	void render();
+	void render_view(int x, int y, int width, int height, cgp::mat4 const& view);
+	void send_moto_lights();
+
+	void draw_title_screen();
+	void draw_hud();
+	void draw_centered_text(ImFont* font, float size, float y, ImU32 color, std::string const& text, float x_center = -1);
 };

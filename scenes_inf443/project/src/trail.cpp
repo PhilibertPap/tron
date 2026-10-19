@@ -2,55 +2,133 @@
 
 using namespace cgp;
 
-mesh create_trail(const std::vector<vec3>& positions, vec3& trail_color)
+namespace
 {
-    mesh trail_mesh;
-    int N = positions.size();
-    if (positions.size() >= 2) {
-        for (size_t i = 0; i + 1 < N; ++i) {
-            vec3 p1 = positions[i];
-            vec3 p2 = positions[i + 1];
-            vec3 p3 = p1 + vec3(0.0f, 0.0f, 0.5f);
-            vec3 p4 = p2 + vec3(0.0f, 0.0f, 0.5f);
+	constexpr float spacing = 0.5f;  // distance minimale entre deux points du mur
+	constexpr float height = 1.1f;   // hauteur du mur
+	constexpr int capacity = int(trail_length_limit / spacing) + 8; // nombre max de points
 
-            // Calcul de la normale pour ce quad
-            vec3 u = p2 - p1;
-            vec3 v = p3 - p1;
-            vec3 normal_front = normalize(cross(u, v));
-            vec3 normal_back = -normal_front;
+	float cross(vec2 const& a, vec2 const& b) { return a.x * b.y - a.y * b.x; }
 
-            // Sommets face avant
-            size_t base = trail_mesh.position.size();
-            trail_mesh.position.push_back(p1);
-            trail_mesh.position.push_back(p2);
-            trail_mesh.position.push_back(p3);
-            trail_mesh.position.push_back(p4);
-            for (int j = 0; j < 4; ++j)
-                trail_mesh.normal.push_back(normal_front);
+	vec2 xy(vec3 const& p) { return { p.x, p.y }; }
 
-            // Sommets face arrière
-            trail_mesh.position.push_back(p1);
-            trail_mesh.position.push_back(p2);
-            trail_mesh.position.push_back(p3);
-            trail_mesh.position.push_back(p4);
-            for (int j = 0; j < 4; ++j)
-                trail_mesh.normal.push_back(normal_back);
+	// Intersection des projections au sol de [p1,p2] et [q1,q2].
+	// Si elles se croisent, t et u donnent la position du croisement sur chacun des segments.
+	bool segments_intersect(vec2 const& p1, vec2 const& p2, vec2 const& q1, vec2 const& q2, float& t, float& u)
+	{
+		vec2 const r = p2 - p1;
+		vec2 const s = q2 - q1;
+		float const denom = cross(r, s);
+		if (std::abs(denom) < 1e-8f)
+			return false; // segments parallèles
 
-            // Triangles face avant
-            trail_mesh.connectivity.push_back({ base, base + 1, base + 2 });
-            trail_mesh.connectivity.push_back({ base + 1, base + 3, base + 2 });
+		t = cross(q1 - p1, s) / denom;
+		u = cross(q1 - p1, r) / denom;
+		return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+	}
+}
 
-            // Triangles face arrière (ordre inversé)
-            trail_mesh.connectivity.push_back({ base + 6, base + 5, base + 4 });
-            trail_mesh.connectivity.push_back({ base + 6, base + 7, base + 5 });
-        }
-    }
-    for (vec3 const& p : trail_mesh.position) {
-        trail_mesh.color.push_back(trail_color);
-    }
-    for (size_t i = 0; i < trail_mesh.position.size(); ++i) {
-        trail_mesh.uv.push_back({ 0.0f, 0.0f });
-    }
-    // Pas de fill_empty_field() ici !
-    return trail_mesh;
+void trail_structure::initialize(vec3 const& color_arg, opengl_shader_structure const& shader)
+{
+	color = color_arg;
+
+	// Chaque point du tracé donne deux sommets (bas et haut du mur), reliés en bande de triangles
+	// (positions provisoires non dégénérées, remplacées dès le premier update_gpu)
+	mesh m;
+	for (int k = 0; k < capacity; ++k) {
+		m.position.push_back({ float(k), 0, 0 });
+		m.position.push_back({ float(k), 0, height });
+	}
+	for (int k = 0; k < capacity - 1; ++k) {
+		unsigned int const i = 2 * k;
+		m.connectivity.push_back({ i, i + 2, i + 1 });
+		m.connectivity.push_back({ i + 1, i + 2, i + 3 });
+	}
+	m.fill_empty_field();
+	drawable.initialize_data_on_gpu(m, shader);
+
+	vertex_positions.resize(2 * capacity);
+	vertex_uv.resize(2 * capacity);
+	reset({ 0, 0, 0 });
+}
+
+void trail_structure::reset(vec3 const& start)
+{
+	points.clear();
+	points.push_back(start);
+	head = start;
+	fixed_length = 0;
+	update_gpu();
+}
+
+void trail_structure::extend(vec3 const& new_head)
+{
+	head = new_head;
+
+	float const d = norm(head - points.back());
+	if (d >= spacing) {
+		points.push_back(head);
+		fixed_length += d;
+	}
+
+	// Le mur se raccourcit par la queue
+	while (points.size() > 2 && (fixed_length > max_length || points.size() >= capacity)) {
+		fixed_length -= norm(points[1] - points[0]);
+		points.pop_front();
+	}
+
+	update_gpu();
+}
+
+bool trail_structure::hits(vec3 const& a, vec3 const& b, float moto_height, int ignored_recent_segments) const
+{
+	// Segment k = 0 : segment mobile [points.back(), head], puis on remonte vers la queue
+	int const n = int(points.size());
+	for (int k = ignored_recent_segments; k < n; ++k) {
+		vec3 const& p = (k == 0) ? head : points[n - k];
+		vec3 const& q = points[n - 1 - k];
+
+		float t, u;
+		if (!segments_intersect(xy(a), xy(b), xy(p), xy(q), t, u))
+			continue;
+
+		// Les tracés se croisent vu du dessus : il y a choc si les hauteurs se recouvrent
+		// (on peut passer sous un mur posé à l'étage, ou sauter par-dessus)
+		float const z_moto = a.z + t * (b.z - a.z);
+		float const z_wall = p.z + u * (q.z - p.z);
+		if (z_moto < z_wall + height && z_moto + moto_height > z_wall)
+			return true;
+	}
+	return false;
+}
+
+void trail_structure::update_gpu()
+{
+	int const n = int(points.size()) + 1; // points fixes + extrémité mobile
+	float const total_length = fixed_length + norm(head - points.back());
+
+	float s = 0; // abscisse curviligne depuis la queue
+	for (int k = 0; k < capacity; ++k) {
+		// Les sommets inutilisés sont tous ramenés sur la tête : triangles dégénérés, invisibles
+		int const i = std::min(k, n - 1);
+		vec3 const& p = (i < n - 1) ? points[i] : head;
+		if (k > 0 && k < n)
+			s += norm(p - points[i - 1]);
+		float const u = total_length > 0 ? s / total_length : 1.0f;
+
+		vertex_positions[2 * k] = p;
+		vertex_positions[2 * k + 1] = p + vec3{ 0, 0, height };
+		vertex_uv[2 * k] = { u, 0.0f };
+		vertex_uv[2 * k + 1] = { u, 1.0f };
+	}
+
+	drawable.vbo_position.update(vertex_positions);
+	drawable.vbo_uv.update(vertex_uv);
+}
+
+void trail_structure::draw(environment_structure const& environment) const
+{
+	uniform_generic_structure uniforms;
+	uniforms.uniform_vec3["trail_color"] = color;
+	cgp::draw(drawable, environment, 1, false, uniforms);
 }
