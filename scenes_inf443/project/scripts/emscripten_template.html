@@ -1,49 +1,50 @@
 <!DOCTYPE html>
+<html lang="fr">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>TRON — Light Cycles</title>
+	<style>
+		html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+		#canvas { display: block; width: 100vw; height: 100vh; outline: none; }
+		#loading {
+			position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+			color: #6ee7ff; font: 600 20px/1.4 system-ui, sans-serif; letter-spacing: 0.3em;
+		}
+	</style>
+</head>
+<body>
+	<div id="loading">CHARGEMENT…</div>
+	<canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
 
-<html lang="en">
+	<script>
+		var canvas = document.getElementById('canvas');
 
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-        <style>
-            * {
-                margin: 0;
-                padding: 0;
-            }
-            #canvas {
-                background-color: black;
-            }
-        </style>
-    </head>
+		function resize() {
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+		}
+		resize();
+		window.addEventListener('resize', resize);
 
-    <body>
+		// Les flèches et Espace ne doivent pas faire défiler la page
+		window.addEventListener('keydown', function (e) {
+			if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].indexOf(e.key) >= 0)
+				e.preventDefault();
+		});
 
-        <canvas id="canvas" width="600" height="600"  oncontextmenu="event.preventDefault()"></canvas>
-
-
-        <script type='text/javascript'>
-        var Module = {
-            canvas: (function() {
-                var canvas = document.getElementById('canvas');
-                canvas.addEventListener("webglcontextlost", function(e) { alert('WebGL context lost. You will need to reload the page.'); e.preventDefault(); }, false);
-                return canvas;
-            })(),
-        };
-        </script>
-
-        <script async type="text/javascript" src="index.js"></script>
-
-        <script async type="text/javascript">
-            
-            resize();
-            window.addEventListener("resize", resize);
-            function resize()
-            {
-                canvas.width  = window.innerWidth-5;
-                canvas.height = window.innerHeight-5;
-            }
-
-        </script>
-
-    </body>
+		var Module = {
+			canvas: canvas,
+			onRuntimeInitialized: function () {
+				document.getElementById('loading').remove();
+				canvas.focus();
+			}
+		};
+		canvas.addEventListener('webglcontextlost', function (e) {
+			alert('Contexte WebGL perdu : rechargez la page.');
+			e.preventDefault();
+		});
+	</script>
+	<script async src="index.js"></script>
+</body>
 </html>

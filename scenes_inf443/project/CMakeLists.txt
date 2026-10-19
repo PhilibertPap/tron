@@ -17,6 +17,9 @@ endif()
 # Compile for Release with Debug Info
 set(CMAKE_BUILD_TYPE RelWithDebInfo) 
 
+# Version "jeu" : sans console ni vérifications de debug (voir scripts/windows_package.bat)
+option(TRON_RELEASE "Build the standalone game version" OFF)
+
 # List the files of the current local project 
 #    Default behavior: Automatically add all hpp and cpp files from src/ directory, and .glsl from shaders/
 #    You may want to change this definition in case of specific file structure
@@ -43,6 +46,9 @@ include(${ABS_PATH_TO_CGP}/CMakeLists.txt)
 
 # Uncomment the following line to remove assertion checks from CGP library (for full efficiency)
 # add_definitions(-DCGP_NO_DEBUG)
+if(TRON_RELEASE)
+   add_definitions(-DCGP_NO_DEBUG)
+endif()
 
 
 # Add all files to create executable
@@ -75,6 +81,12 @@ if(MSVC)
    endif()
 
     add_definitions(/MP /wd4244 /wd4127 /wd4267 /wd4706 /wd4458 /wd4996 /wd26495 /openmp)   # Parallel build (/MP) + disable some warnings
+    target_compile_options(${executable_name} PRIVATE /utf-8) # sources en UTF-8 (accents des textes affichés)
+    if(TRON_RELEASE)
+       # Pas de fenêtre console derrière le jeu, et l'exe reste dans build_release/bin
+       set_target_properties(${executable_name} PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
+       set_target_properties(${executable_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin$<0:>)
+    endif()
     source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${src_files})  #Allow to explore source directories as a tree in Visual Studio
 endif()
 

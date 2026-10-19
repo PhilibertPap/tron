@@ -1,0 +1,49 @@
+# Compile la version web du jeu (WebAssembly) et la publie sur GitHub Pages
+# à chaque push sur main : https://philibertpap.github.io/tron/
+name: Version web
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.64
+
+      - name: Compilation avec Emscripten
+        working-directory: scenes_inf443/project
+        run: |
+          cp scripts/Makefile_emscripten Makefile_emscripten
+          emmake make -f Makefile_emscripten -j$(nproc)
+          mkdir -p ../../_site
+          cp index.html index.js index.wasm index.data ../../_site/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
