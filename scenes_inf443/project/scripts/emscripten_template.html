@@ -2,20 +2,51 @@
 <html lang="fr">
 <head>
 	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+	<meta name="theme-color" content="#000000">
 	<title>TRON — Light Cycles</title>
 	<style>
-		html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
-		#canvas { display: block; width: 100vw; height: 100vh; outline: none; }
+		html, body { margin: 0; height: 100%; background: #000; overflow: hidden; overscroll-behavior: none; }
+		#canvas { display: block; width: 100vw; height: 100vh; outline: none; touch-action: none; }
+
 		#loading {
 			position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
 			color: #6ee7ff; font: 600 20px/1.4 system-ui, sans-serif; letter-spacing: 0.3em;
 		}
+
+		/* Menu affiché à la place du menu du jeu sur téléphone et tablette */
+		#mobile-menu {
+			position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center;
+			gap: 14px; background: rgba(0, 0, 0, 0.75); color: #d6f6ff; font-family: system-ui, sans-serif; text-align: center;
+		}
+		#mobile-menu h1 { margin: 0; font-size: 52px; letter-spacing: 0.15em; color: #6ee7ff; text-shadow: 0 0 18px #19c3ff; }
+		#mobile-menu p { margin: 0; font-size: 15px; opacity: 0.85; }
+		#mobile-menu .levels { display: flex; gap: 12px; }
+		#mobile-menu button, #menu-button {
+			font: 600 17px system-ui, sans-serif; color: #d6f6ff; background: rgba(0, 40, 60, 0.6);
+			border: 2px solid #19c3ff; border-radius: 10px; padding: 12px 20px; box-shadow: 0 0 12px rgba(25, 195, 255, 0.5);
+		}
+		#rotate-hint { display: none; color: #ffb36b; }
+		@media (orientation: portrait) { #rotate-hint { display: block; } }
+
+		#menu-button { position: fixed; top: 10px; left: 10px; display: none; padding: 6px 12px; font-size: 14px; }
 	</style>
 </head>
 <body>
 	<div id="loading">CHARGEMENT…</div>
 	<canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+
+	<div id="mobile-menu">
+		<h1>TRON</h1>
+		<p>Tu es Tron, face à Clu. Penche le téléphone pour tourner,<br>doigt à droite pour accélérer, à gauche pour freiner.</p>
+		<p id="rotate-hint">Tourne ton téléphone à l'horizontale.</p>
+		<div class="levels">
+			<button data-level="0">Facile</button>
+			<button data-level="1">Normal</button>
+			<button data-level="2">Difficile</button>
+		</div>
+	</div>
+	<button id="menu-button">Menu</button>
 
 	<script>
 		var canvas = document.getElementById('canvas');
@@ -38,11 +69,125 @@
 			onRuntimeInitialized: function () {
 				document.getElementById('loading').remove();
 				canvas.focus();
+				if (isTouchDevice)
+					showMobileMenu();
 			}
 		};
 		canvas.addEventListener('webglcontextlost', function (e) {
 			alert('Contexte WebGL perdu : rechargez la page.');
 			e.preventDefault();
+		});
+
+
+		// Commandes sur téléphone
+		// -----------------------
+		// Le jeu (C++, voir src/mobile_controls.cpp) relit cet objet à chaque image.
+		var tronMobile = window.tronMobile = {
+			active: false,     // vrai une fois une partie lancée depuis le menu du téléphone
+			steer: 0,          // +1 : à gauche, -1 : à droite
+			throttle: 0,       // +1 : accélérer, -1 : freiner
+			taps: 0,
+			startRequest: -1,  // difficulté choisie dans le menu
+			menuRequest: false
+		};
+
+		var isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+		var tiltAvailable = false;
+		var tiltSteer = 0;
+		var touchLeft = false, touchRight = false;
+		var gravitySign = 0;
+
+		var maxWheelAngle = 25; // inclinaison (degrés) qui donne le braquage maximal
+		var deadZone = 3;
+
+		function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+
+		function updateControls() {
+			if (tiltAvailable) {
+				tronMobile.steer = tiltSteer;
+				tronMobile.throttle = (touchRight ? 1 : 0) - (touchLeft ? 1 : 0);
+			}
+			else {
+				// Sans capteur de mouvement : on tourne en touchant la moitié gauche ou droite de l'écran
+				tronMobile.steer = (touchLeft ? 1 : 0) - (touchRight ? 1 : 0);
+				tronMobile.throttle = 0;
+			}
+		}
+
+		// Le téléphone est tenu comme un volant : on mesure sa rotation dans le plan de l'écran
+		// à partir de la direction de la gravité, exprimée dans le repère de l'écran.
+		window.addEventListener('devicemotion', function (e) {
+			var g = e.accelerationIncludingGravity;
+			if (!g || g.x === null)
+				return;
+			tiltAvailable = true;
+
+			var angle = (screen.orientation ? screen.orientation.angle : (window.orientation || 0)) * Math.PI / 180;
+			var x = g.x * Math.cos(angle) - g.y * Math.sin(angle); // vers la droite de l'écran
+			var y = g.x * Math.sin(angle) + g.y * Math.cos(angle); // vers le haut de l'écran
+
+			// Selon les navigateurs, la gravité est donnée avec un signe ou l'autre : on le déduit
+			// du fait que le joueur tient l'écran à peu près droit devant lui.
+			if (gravitySign === 0 && Math.abs(y) > 3)
+				gravitySign = (y > 0) ? 1 : -1;
+			if (gravitySign !== 0) {
+				x *= gravitySign;
+				y *= gravitySign;
+			}
+
+			var wheel = Math.atan2(-x, y) * 180 / Math.PI; // > 0 quand on tourne le téléphone vers la droite
+			var magnitude = Math.max(0, Math.abs(wheel) - deadZone);
+			tiltSteer = -Math.sign(wheel) * clamp(magnitude / (maxWheelAngle - deadZone), 0, 1);
+			updateControls();
+		});
+
+		function updateTouches(e) {
+			touchLeft = false;
+			touchRight = false;
+			for (var i = 0; i < e.touches.length; ++i) {
+				if (e.touches[i].clientX < window.innerWidth / 2) touchLeft = true;
+				else touchRight = true;
+			}
+			updateControls();
+			e.preventDefault();
+		}
+		canvas.addEventListener('touchstart', function (e) { tronMobile.taps++; updateTouches(e); }, { passive: false });
+		canvas.addEventListener('touchmove', updateTouches, { passive: false });
+		canvas.addEventListener('touchend', updateTouches, { passive: false });
+		canvas.addEventListener('touchcancel', updateTouches, { passive: false });
+
+		var mobileMenu = document.getElementById('mobile-menu');
+		var menuButton = document.getElementById('menu-button');
+
+		function showMobileMenu() {
+			mobileMenu.style.display = 'flex';
+			menuButton.style.display = 'none';
+		}
+
+		async function startMobileGame(level) {
+			// iPhone : l'accès aux capteurs doit être demandé pendant un geste de l'utilisateur
+			if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+				try { await DeviceMotionEvent.requestPermission(); } catch (err) {}
+			}
+			// Android : plein écran et paysage (sans effet sur iPhone)
+			try {
+				await document.documentElement.requestFullscreen();
+				await screen.orientation.lock('landscape');
+			} catch (err) {}
+
+			gravitySign = 0;
+			tronMobile.active = true;
+			tronMobile.startRequest = level;
+			mobileMenu.style.display = 'none';
+			menuButton.style.display = 'block';
+		}
+
+		mobileMenu.querySelectorAll('button').forEach(function (button) {
+			button.addEventListener('click', function () { startMobileGame(Number(button.dataset.level)); });
+		});
+		menuButton.addEventListener('click', function () {
+			tronMobile.menuRequest = true;
+			showMobileMenu();
 		});
 	</script>
 	<script async src="index.js"></script>

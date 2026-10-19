@@ -11,13 +11,10 @@ namespace
 	constexpr float boost_duration = 2.0f;
 	constexpr float speed_response = 1.5f; // vitesse à laquelle on rejoint la vitesse visée (1/s)
 
-	constexpr float turn_rate = 2.6f;      // rad/s
 	constexpr float air_control = 0.3f;    // fraction du braquage disponible en plein saut
 	constexpr float max_lean = 0.45f;      // rad
 	constexpr float gravity = 25.0f;
 	constexpr float snap_distance = 0.5f;  // en dessous, la moto reste collée au sol (descente de rampe)
-
-	constexpr float half_length = 1.2f;    // distance du centre à l'avant (ou l'arrière) de la moto
 
 	// Rapproche value de target, sans dépasser, avec un taux exponentiel
 	float approach(float value, float target, float rate, float dt)
@@ -82,7 +79,7 @@ void player_structure::update(player_input const& input, float dt, level_structu
 		speed = approach(speed, target_speed, speed_response, dt);
 
 		float const grip = on_ground ? 1.0f : air_control;
-		heading += grip * input.steer * turn_rate * dt;
+		heading += grip * input.steer * moto_turn_rate * dt;
 		lean = approach(lean, input.steer * max_lean, 6.0f, dt);
 	}
 
@@ -155,12 +152,12 @@ vec3 player_structure::position_3d() const
 
 vec3 player_structure::front() const
 {
-	vec2 const p = position + half_length * direction();
+	vec2 const p = position + moto_half_length * direction();
 	return { p.x, p.y, altitude };
 }
 
 vec3 player_structure::rear() const
 {
-	vec2 const p = position - half_length * direction();
+	vec2 const p = position - moto_half_length * direction();
 	return { p.x, p.y, altitude };
 }

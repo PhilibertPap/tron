@@ -80,12 +80,13 @@ void scene_structure::initialize()
 	explosions.initialize();
 	bloom.initialize(shaders + "post/");
 
-	// Joueur 1 à gauche du clavier (ZQSD en AZERTY, WASD en QWERTY), joueur 2 sur les flèches
+	// Tron (bleu) à gauche du clavier (ZQSD en AZERTY, WASD en QWERTY), Clu (orange) sur les flèches.
+	// En solo, Clu est piloté par l'IA.
 	players.resize(2);
 	keyboard_layout const zqsd = { { GLFW_KEY_W, GLFW_KEY_Z }, { GLFW_KEY_S, GLFW_KEY_S }, { GLFW_KEY_A, GLFW_KEY_Q }, { GLFW_KEY_D, GLFW_KEY_D } };
 	keyboard_layout const arrows = { { GLFW_KEY_UP, GLFW_KEY_UP }, { GLFW_KEY_DOWN, GLFW_KEY_DOWN }, { GLFW_KEY_LEFT, GLFW_KEY_LEFT }, { GLFW_KEY_RIGHT, GLFW_KEY_RIGHT } };
-	players[0].initialize("Joueur 1", { 0.1f, 0.75f, 1.0f }, zqsd, trail_shader);
-	players[1].initialize("Joueur 2", { 1.0f, 0.45f, 0.08f }, arrows, trail_shader);
+	players[0].initialize("Tron", { 0.1f, 0.75f, 1.0f }, zqsd, trail_shader);
+	players[1].initialize("Clu", { 1.0f, 0.45f, 0.08f }, arrows, trail_shader);
 	player_cameras.resize(players.size());
 
 	camera_control.initialize(inputs, window);
@@ -115,6 +116,7 @@ void scene_structure::start_match()
 {
 	for (player_structure& player : players)
 		player.score = 0;
+	ai.difficulty = options.difficulty;
 	start_round();
 }
 
@@ -131,6 +133,7 @@ void scene_structure::start_round()
 
 	boosters.clear();
 	explosions.clear();
+	ai.reset();
 	set_state(game_state::countdown);
 }
 
@@ -163,9 +166,9 @@ void scene_structure::update(float dt)
 		detect_collisions();
 		if (state_time > round_over_duration) {
 			bool match_won = false;
-			for (player_structure const& player : players) {
-				if (player.score >= options.points_to_win) {
-					round_message = player.name + " remporte la partie !";
+			for (size_t i = 0; i < players.size(); ++i) {
+				if (players[i].score >= options.points_to_win) {
+					round_message = victory_message(i);
 					match_won = true;
 				}
 			}
@@ -183,12 +186,34 @@ void scene_structure::update(float dt)
 
 void scene_structure::update_riders(float dt)
 {
-	for (player_structure& player : players) {
+	for (size_t i = 0; i < players.size(); ++i) {
 		player_input input;
 		if (state == game_state::playing)
-			input = read_keyboard(inputs.keyboard, player.keys);
-		player.update(input, dt, level);
+			input = input_for(i, dt);
+		players[i].update(input, dt, level);
 	}
+}
+
+// D'où viennent les commandes de chaque moto : clavier ou IA
+player_input scene_structure::input_for(size_t i, float dt)
+{
+	if (options.solo && i == 1)
+		return ai.decide(players[1], players, level, boosters, dt);
+
+	if (options.solo && mobile.is_active())
+		return mobile.read();
+
+	if (options.solo) {
+		// Seul contre l'IA, on peut jouer avec ZQSD comme avec les flèches
+		player_input const a = read_keyboard(inputs.keyboard, players[0].keys);
+		player_input const b = read_keyboard(inputs.keyboard, players[1].keys);
+		player_input input;
+		input.throttle = std::max(-1.0f, std::min(1.0f, a.throttle + b.throttle));
+		input.steer = std::max(-1.0f, std::min(1.0f, a.steer + b.steer));
+		return input;
+	}
+
+	return read_keyboard(inputs.keyboard, players[i].keys);
 }
 
 void scene_structure::detect_collisions()
@@ -228,11 +253,11 @@ void scene_structure::detect_collisions()
 
 void scene_structure::check_end_of_round()
 {
-	player_structure* survivor = nullptr;
+	size_t survivor = 0;
 	int riders = 0;
-	for (player_structure& player : players) {
-		if (player.is_riding()) {
-			survivor = &player;
+	for (size_t i = 0; i < players.size(); ++i) {
+		if (players[i].is_riding()) {
+			survivor = i;
 			riders++;
 		}
 	}
@@ -240,13 +265,43 @@ void scene_structure::check_end_of_round()
 		return;
 
 	if (riders == 1) {
-		survivor->score++;
-		round_message = survivor->name + " marque le point";
+		players[survivor].score++;
+		round_message = point_message(survivor);
 	}
 	else
 		round_message = "Égalité";
 
 	set_state(game_state::round_over);
+}
+
+std::string scene_structure::point_message(size_t scorer) const
+{
+	return "Point pour " + players[scorer].name;
+}
+
+std::string scene_structure::victory_message(size_t winner) const
+{
+	return players[winner].name + " remporte la partie !";
+}
+
+
+// Sur téléphone, le menu est en HTML (voir scripts/emscripten_template.html) : on traite ici ses demandes
+void scene_structure::handle_mobile_events()
+{
+	int const difficulty = mobile.take_start_request();
+	if (difficulty >= 0) {
+		options.solo = true;
+		options.difficulty = ai_difficulty(difficulty);
+		if (options.camera == camera_mode::overview)
+			options.camera = camera_mode::third_person;
+		start_match();
+	}
+
+	if (mobile.take_menu_request())
+		set_state(game_state::title);
+
+	if (mobile.take_tap() && state == game_state::match_over)
+		start_match();
 }
 
 
@@ -256,6 +311,8 @@ void scene_structure::check_end_of_round()
 void scene_structure::display_frame()
 {
 	float const dt = std::min(timer.update(), 0.05f); // pas de grand saut si une frame a été lente
+	if (mobile.is_active())
+		handle_mobile_events();
 	update(dt);
 
 	project::gui_scale = std::max(0.6f, std::min(1.6f, window.height / 1000.0f));
@@ -287,11 +344,15 @@ void scene_structure::render()
 		render_view(0, 0, w, h, camera_control.camera_model.matrix_view());
 	}
 	else {
-		// Ecran partagé : joueur 1 à gauche, joueur 2 à droite (comme sur le clavier)
 		camera_projection.field_of_view = (options.camera == camera_mode::first_person ? 75.0f : 65.0f) * Pi / 180;
-		int const half = w / 2;
-		render_view(0, 0, half - 1, h, player_cameras[0].view_matrix());
-		render_view(half + 1, 0, w - half - 1, h, player_cameras[1].view_matrix());
+		if (options.solo)
+			render_view(0, 0, w, h, player_cameras[0].view_matrix());
+		else {
+			// Ecran partagé : joueur 1 à gauche, joueur 2 à droite (comme sur le clavier)
+			int const half = w / 2;
+			render_view(0, 0, half - 1, h, player_cameras[0].view_matrix());
+			render_view(half + 1, 0, w - half - 1, h, player_cameras[1].view_matrix());
+		}
 	}
 
 	if (use_bloom)
@@ -341,10 +402,10 @@ void scene_structure::send_moto_lights()
 
 void scene_structure::display_gui()
 {
-	if (state == game_state::title)
-		draw_title_screen();
-	else
+	if (state != game_state::title)
 		draw_hud();
+	else if (!mobile.is_active())
+		draw_title_screen(); // sur téléphone, c'est le menu HTML qui s'affiche
 }
 
 void scene_structure::draw_centered_text(ImFont* font, float size, float y, ImU32 color, std::string const& text, float x_center)
@@ -373,6 +434,25 @@ void scene_structure::draw_title_screen()
 	ImGui::Begin("Menu", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
 		| ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings);
 
+	int mode = options.solo ? 0 : 1;
+	ImGui::Text("Mode");
+	ImGui::RadioButton("Solo contre Clu", &mode, 0);
+	ImGui::SameLine();
+	ImGui::RadioButton("2 joueurs", &mode, 1);
+	options.solo = (mode == 0);
+
+	if (options.solo) {
+		int difficulty = int(options.difficulty);
+		ImGui::Text("Difficulté");
+		ImGui::RadioButton("Facile", &difficulty, int(ai_difficulty::easy));
+		ImGui::SameLine();
+		ImGui::RadioButton("Normale", &difficulty, int(ai_difficulty::normal));
+		ImGui::SameLine();
+		ImGui::RadioButton("Difficile", &difficulty, int(ai_difficulty::hard));
+		options.difficulty = ai_difficulty(difficulty);
+	}
+
+	ImGui::Spacing();
 	int camera = int(options.camera);
 	ImGui::Text("Vue");
 	ImGui::RadioButton("Globale", &camera, int(camera_mode::overview));
@@ -389,12 +469,19 @@ void scene_structure::draw_title_screen()
 		ImGui::Checkbox("Effet de lueur", &options.bloom);
 
 	ImGui::Separator();
-	ImGui::TextColored({ 0.1f, 0.75f, 1.0f, 1.0f }, "Joueur 1");
-	ImGui::SameLine(130 * project::gui_scale);
-	ImGui::Text("Z Q S D  (W A S D en QWERTY)");
-	ImGui::TextColored({ 1.0f, 0.45f, 0.08f, 1.0f }, "Joueur 2");
-	ImGui::SameLine(130 * project::gui_scale);
-	ImGui::Text("Flèches");
+	if (options.solo) {
+		ImGui::TextColored({ 0.1f, 0.75f, 1.0f, 1.0f }, "Tron");
+		ImGui::SameLine(130 * project::gui_scale);
+		ImGui::Text("Z Q S D ou flèches");
+	}
+	else {
+		ImGui::TextColored({ 0.1f, 0.75f, 1.0f, 1.0f }, "Tron");
+		ImGui::SameLine(130 * project::gui_scale);
+		ImGui::Text("Z Q S D  (W A S D en QWERTY)");
+		ImGui::TextColored({ 1.0f, 0.45f, 0.08f, 1.0f }, "Clu");
+		ImGui::SameLine(130 * project::gui_scale);
+		ImGui::Text("Flèches");
+	}
 	ImGui::Spacing();
 	ImGui::TextDisabled("C : changer de vue    F11 : plein écran    Échap : menu / quitter");
 	ImGui::End();
@@ -407,9 +494,9 @@ void scene_structure::draw_hud()
 {
 	float const W = ImGui::GetIO().DisplaySize.x;
 	float const H = ImGui::GetIO().DisplaySize.y;
-	bool const split = options.camera != camera_mode::overview;
+	bool const split = !options.solo && options.camera != camera_mode::overview;
 
-	// Scores : au-dessus de chaque moitié d'écran, ou côte à côte en vue globale
+	// Scores : au-dessus de chaque moitié d'écran, ou côte à côte sur un seul écran
 	for (size_t i = 0; i < players.size(); ++i) {
 		player_structure const& player = players[i];
 		float const x = split ? (i == 0 ? 0.25f : 0.75f) * W : (i == 0 ? 0.45f : 0.55f) * W;
@@ -419,9 +506,14 @@ void scene_structure::draw_hud()
 	}
 
 	ImU32 const white = to_imgui_color({ 1, 1, 1 });
+	ImU32 const light_blue = to_imgui_color({ 0.8f, 0.9f, 1.0f });
 	if (state == game_state::countdown) {
 		int const count = int(countdown_duration - state_time) + 1;
 		draw_centered_text(title_font, 0.25f * H, 0.45f * H, white, str(count));
+		if (mobile.is_active()) {
+			draw_centered_text(text_font, 0.055f * H, 0.76f * H, light_blue, "Penche le téléphone pour tourner");
+			draw_centered_text(text_font, 0.045f * H, 0.84f * H, light_blue, "Doigt à droite : accélérer    Doigt à gauche : freiner");
+		}
 	}
 	else if (state == game_state::playing && state_time < 0.7f) {
 		draw_centered_text(title_font, 0.2f * H, 0.45f * H, to_imgui_color({ 1, 1, 1 }, 1 - state_time / 0.7f), "GO");
@@ -431,7 +523,8 @@ void scene_structure::draw_hud()
 	}
 	else if (state == game_state::match_over) {
 		draw_centered_text(text_font, 0.09f * H, 0.42f * H, white, round_message);
-		draw_centered_text(text_font, 0.045f * H, 0.55f * H, to_imgui_color({ 0.8f, 0.9f, 1.0f }), "Entrée : rejouer      Échap : menu");
+		draw_centered_text(text_font, 0.045f * H, 0.55f * H, light_blue,
+			mobile.is_active() ? "Touchez l'écran pour rejouer" : "Entrée : rejouer      Échap : menu");
 	}
 }
 

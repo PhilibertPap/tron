@@ -29,6 +29,8 @@ player_input read_keyboard(cgp::inputs_keyboard_parameters const& keyboard, keyb
 enum class player_status { riding, falling, crashed };
 
 constexpr float moto_height = 1.2f;
+constexpr float moto_half_length = 1.2f; // distance du centre à l'avant (ou l'arrière) de la moto
+constexpr float moto_turn_rate = 2.6f;   // vitesse de rotation à plein braquage (rad/s)
 
 struct player_structure
 {

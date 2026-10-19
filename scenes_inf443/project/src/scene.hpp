@@ -3,10 +3,12 @@
 #include "cgp/cgp.hpp"
 #include "environment.hpp"
 
+#include "ai_driver.hpp"
 #include "bloom.hpp"
 #include "boosters.hpp"
 #include "explosions.hpp"
 #include "level.hpp"
+#include "mobile_controls.hpp"
 #include "player.hpp"
 
 #include <string>
@@ -19,6 +21,8 @@ enum class camera_mode { overview, third_person, first_person };
 // Options réglables depuis l'écran titre
 struct game_options
 {
+	bool solo = true; // solo : le joueur 2 est piloté par l'IA
+	ai_difficulty difficulty = ai_difficulty::normal;
 	camera_mode camera = camera_mode::third_person;
 	int points_to_win = 5;
 	float wall_length = 120.0f;
@@ -53,6 +57,8 @@ struct scene_structure : cgp::scene_inputs_generic
 	std::vector<player_structure> players;
 	std::vector<follow_camera> player_cameras;
 	booster_field boosters;
+	ai_driver ai;
+	mobile_controls mobile;
 	explosion_effects explosions;
 	bloom_effect bloom;
 
@@ -76,10 +82,14 @@ private:
 	void start_match();
 	void start_round();
 
+	void handle_mobile_events();
 	void update(float dt);
 	void update_riders(float dt);
+	player_input input_for(size_t player_index, float dt);
 	void detect_collisions();
 	void check_end_of_round();
+	std::string point_message(size_t scorer) const;
+	std::string victory_message(size_t winner) const;
 
 	void render();
 	void render_view(int x, int y, int width, int height, cgp::mat4 const& view);
