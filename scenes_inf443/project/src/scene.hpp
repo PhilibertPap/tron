@@ -82,13 +82,13 @@ struct scene_structure : cgp::scene_inputs_generic {
 	const float min_speed_threshold = 0.1f;
 	const float turn_speed = 3.0f;
 
-	std::vector<vec3> moto_lights; // Liste des lumières les plus proches pour la moto 1
-	std::vector<vec3> moto2_lights; // Liste des lumières les plus proches pour la moto 2
+	std::vector<vec3> moto_lights; // Liste des lumiÃ¨res les plus proches pour la moto 1
+	std::vector<vec3> moto2_lights; // Liste des lumiÃ¨res les plus proches pour la moto 2
 
 	// Booster
 	std::vector<vec3> booster_positions;
-	float booster_radius = 2.0f; // rayon de détection du booster
-	float booster_value = 5.0f;  // valeur d'accélération instantanée
+	float booster_radius = 2.0f; // rayon de dÃ©tection du booster
+	float booster_value = 5.0f;  // valeur d'accÃ©lÃ©ration instantanÃ©e
 	float booster_spawn_timer = 0.0f;
 	float booster_spawn_interval = 5.0f; // un booster toutes les 5 secondes
 

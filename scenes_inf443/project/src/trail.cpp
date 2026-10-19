@@ -28,7 +28,7 @@ mesh create_trail(const std::vector<vec3>& positions, vec3& trail_color)
             for (int j = 0; j < 4; ++j)
                 trail_mesh.normal.push_back(normal_front);
 
-            // Sommets face arrière
+            // Sommets face arriÃ¨re
             trail_mesh.position.push_back(p1);
             trail_mesh.position.push_back(p2);
             trail_mesh.position.push_back(p3);
@@ -40,7 +40,7 @@ mesh create_trail(const std::vector<vec3>& positions, vec3& trail_color)
             trail_mesh.connectivity.push_back({ base, base + 1, base + 2 });
             trail_mesh.connectivity.push_back({ base + 1, base + 3, base + 2 });
 
-            // Triangles face arrière (ordre inversé)
+            // Triangles face arriÃ¨re (ordre inversÃ©)
             trail_mesh.connectivity.push_back({ base + 6, base + 5, base + 4 });
             trail_mesh.connectivity.push_back({ base + 6, base + 7, base + 5 });
         }

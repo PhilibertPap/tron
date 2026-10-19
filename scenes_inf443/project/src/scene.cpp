@@ -2,6 +2,8 @@
 
 #include "trail.hpp"
 
+#include <limits>
+
 using namespace cgp;
 
 void deform_terrain(mesh& m)
@@ -33,26 +35,26 @@ float get_grid_height(const mesh& grille_mesh, float L, int N, float x, float y)
     ix = std::max(0, std::min(N-1, ix));
     iy = std::max(0, std::min(N-1, iy));
 
-    // Indices des 4 sommets du carré local
+    // Indices des 4 sommets du carrÃ© local
     int grid_size = N + 1;
     int idx00 = ix     + iy     * grid_size;
     int idx10 = (ix+1) + iy     * grid_size;
     int idx01 = ix     + (iy+1) * grid_size;
     int idx11 = (ix+1) + (iy+1) * grid_size;
 
-    // Vérification des bornes
+    // VÃ©rification des bornes
     int max_index = static_cast<int>(grille_mesh.position.size()) - 1;
     if (idx00 > max_index || idx10 > max_index || idx01 > max_index || idx11 > max_index ||
         idx00 < 0 || idx10 < 0 || idx01 < 0 || idx11 < 0) {
-        // Retourne une valeur par défaut ou lève une exception selon le besoin
+        // Retourne une valeur par dÃ©faut ou lÃ¨ve une exception selon le besoin
         return 0.0f;
     }
 
-    // Coordonnées locales dans la cellule
+    // CoordonnÃ©es locales dans la cellule
     float tx = fx - ix;
     float ty = fy - iy;
 
-    // Interpolation bilinéaire des hauteurs
+    // Interpolation bilinÃ©aire des hauteurs
     float z00 = grille_mesh.position[idx00].z;
     float z10 = grille_mesh.position[idx10].z;
     float z01 = grille_mesh.position[idx01].z;
@@ -73,17 +75,17 @@ void get_k_closest_lights(const std::vector<vec3>& luminaire_positions, const ve
 
     for (const vec3& l : luminaire_positions) {
         float d = norm(l - pos);
-        // Trouver la case la plus éloignée dans closest[]
+        // Trouver la case la plus Ã©loignÃ©e dans closest[]
         int imax = 0;
         for (int i = 1; i < k; ++i)
             if (max_dists[i] > max_dists[imax]) imax = i;
-        // Si ce luminaire est plus proche que le plus éloigné du tableau, on le remplace
+        // Si ce luminaire est plus proche que le plus Ã©loignÃ© du tableau, on le remplace
         if (d < max_dists[imax]) {
             max_dists[imax] = d;
             closest[imax] = l;
         }
     }
-    // Remplir le résultat
+    // Remplir le rÃ©sultat
     for (int i = 0; i < k; ++i)
         out_lights.push_back(closest[i]);
 }
@@ -100,7 +102,7 @@ void scene_structure::initialize()
 	camera_control.set_rotation_axis_z(); // camera rotates around z-axis
 	//   look_at(camera_position, targeted_point, up_direction)
 	camera_control.look_at(
-		{ -50.0f, 0.0f, 100.0f }, // position caméra (plus haut et derrière)
+		{ -50.0f, 0.0f, 100.0f }, // position camÃ©ra (plus haut et derriÃ¨re)
 		{ 0.0f, 0.0f, 0.0f },  // cible (la moto au centre)
 		{ 0.0f, 0.0f, 1.0f }   // up
 	);
@@ -125,7 +127,7 @@ void scene_structure::initialize()
 	}
 
 	// Placement des luminaires
-	int light_step = 10; // espace les lumières tous les 10 points de la grille
+	int light_step = 10; // espace les lumiÃ¨res tous les 10 points de la grille
 	for (int ix = 0; ix <= N; ix += light_step) {
 	    for (int iy = 0; iy <= N; iy += light_step) {
 	        float x = -L/2 + ix * (L / N);
@@ -246,9 +248,9 @@ void scene_structure::display_frame()
 	// Clamp la vitesse
 	float moto_max = (moto_boost_timer > 0.0f) ? boost_max_speed : max_speed;
 	if (moto_speed > moto_max) moto_speed = moto_max;
-	if (moto_speed < 0.0f) moto_speed = 0.0f; // Empêche la marche arrière
+	if (moto_speed < 0.0f) moto_speed = 0.0f; // EmpÃªche la marche arriÃ¨re
 
-	// Seuil minimal pour arrêter la moto
+	// Seuil minimal pour arrÃªter la moto
 	if (std::abs(moto_speed) < min_speed_threshold) moto_speed = 0.0f;
 
 	// Calcul de la nouvelle position x/y
@@ -256,12 +258,12 @@ void scene_structure::display_frame()
 	float new_x = moto_position.x + direction.x * moto_speed * dt;
 	float new_y = moto_position.y + direction.y * moto_speed * dt;
 
-	// Met à jour la position de la moto
+	// Met Ã  jour la position de la moto
 	moto_position.x = new_x;
 	moto_position.y = new_y;
 	moto_position.z = get_grid_height(grille_mesh, L, N, new_x, new_y) + 0.8f;
 
-	// Application à la moto
+	// Application Ã  la moto
 	moto["Body"].transform_local.translation = moto_position;
 	moto["Body"].transform_local.rotation = rotation_transform::from_axis_angle({ 0, 0, 1 }, moto_orientation);
 
@@ -281,7 +283,7 @@ void scene_structure::display_frame()
 	    environment.uniform_generic.uniform_vec3["local_lights[" + std::to_string(i) + "]"] = moto_lights[i];
 	draw(moto, environment);
 
-	// --- Contrôle de la deuxième moto (ZQSD) ---
+	// --- ContrÃ´le de la deuxiÃ¨me moto (ZQSD) ---
 	if (inputs.keyboard.is_pressed(GLFW_KEY_W)) { // avancer
 		moto2_speed += acceleration * dt;
 	}
@@ -340,7 +342,7 @@ void scene_structure::display_frame()
 	trail.vbo_position.clear();
 
 	if (trail_positions.size() >= 2) {
-		// Supprimer les points consécutifs trop proches
+		// Supprimer les points consÃ©cutifs trop proches
 		std::vector<vec3> filtered_positions;
 		filtered_positions.push_back(trail_positions[0]);
 		for (size_t i = 1; i < trail_positions.size(); ++i) {
@@ -390,7 +392,7 @@ void scene_structure::display_frame()
 	if (booster_spawn_timer > booster_spawn_interval) {
 	    booster_spawn_timer = 0.0f;
 	    if (booster_positions.size() < MAX_BOOSTERS) {
-	        // Position aléatoire sur le terrain
+	        // Position alÃ©atoire sur le terrain
 	        float bx = -L/2 + static_cast<float>(rand())/RAND_MAX * L;
 	        float by = -L/2 + static_cast<float>(rand())/RAND_MAX * L;
 	        float bz = get_grid_height(grille_mesh, L, N, bx, by) + 1.0f;
@@ -440,7 +442,7 @@ void scene_structure::display_frame()
 	// Passer la position au shader
 	environment.uniform_generic.uniform_vec3["local_light"] = closest_light;
 
-	// --- Reset général si ESPACE ---
+	// --- Reset gÃ©nÃ©ral si ESPACE ---
 	if (inputs.keyboard.is_pressed(GLFW_KEY_SPACE)) {
 	    // Reset complet des deux motos et des scores
 	    moto_position = { 0.0f,  -L / 2 + 3.0f, get_grid_height(grille_mesh, L, N, -L / 4, 0.0f) + 0.8f };
@@ -454,7 +456,7 @@ void scene_structure::display_frame()
 	    score_moto1 = 0;
 	    score_moto2 = 0;
 	    loser = 0;
-	    booster_positions.clear(); // Ajout : réinitialise les boosters
+	    booster_positions.clear(); // Ajout : rÃ©initialise les boosters
 	}
 
 	// --- Collision detection ---
@@ -492,7 +494,7 @@ void scene_structure::display_frame()
 	    trail_positions2.clear();
 	}
 
-	// --- Affichage du message de défaite ---
+	// --- Affichage du message de dÃ©faite ---
 	if (loser != 0) {
 	    ImGui::Begin("Score");
 	    if (loser == 1)
@@ -543,22 +545,22 @@ void scene_structure::keyboard_event()
 
 void scene_structure::idle_frame()
 {
-    // Sauvegarde l'état des flèches
+    // Sauvegarde l'Ã©tat des flÃ¨ches
     bool left = inputs.keyboard.left;
     bool right = inputs.keyboard.right;
     bool up = inputs.keyboard.up;
     bool down = inputs.keyboard.down;
 
-    // Désactive les flèches pour la caméra
+    // DÃ©sactive les flÃ¨ches pour la camÃ©ra
     inputs.keyboard.left = false;
     inputs.keyboard.right = false;
     inputs.keyboard.up = false;
     inputs.keyboard.down = false;
 
-    // Appelle le comportement caméra sans les flèches
+    // Appelle le comportement camÃ©ra sans les flÃ¨ches
     camera_control.idle_frame(environment.camera_view);
 
-    // Restaure l'état des flèches
+    // Restaure l'Ã©tat des flÃ¨ches
     inputs.keyboard.left = left;
     inputs.keyboard.right = right;
     inputs.keyboard.up = up;
