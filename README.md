@@ -1,65 +1,64 @@
-# INF 433
+# TRON 3D — Light Cycles
 
-Auteurs: Philibert PAPPENS & Wandrille BOIVIN
+Projet INF443 — Philibert Pappens & Wandrille Boivin
 
-🎮 TRON – Le jeu
+Jeu de motos de lumière inspiré de *Tron* (1982) et *Tron: Legacy* (2010), en C++ avec la bibliothèque CGP.
+Chaque moto laisse derrière elle un mur de lumière : toucher un mur, le décor ou tomber dans le vide fait perdre la manche.
+Contrairement au jeu d'origine en 2D, l'arène est en 3D : étages, rampes, passerelles et tremplins.
 
-Le jeu TRON est inspiré de l’univers du film Tron (1982, puis Tron: Legacy en 2010), qui met en scène des personnages plongés dans un monde numérique.
+Version en ligne : https://philibertpap.github.io/tron/
 
-🎲 Concept de jeu :
-Le jeu le plus emblématique issu de TRON est appelé "Light Cycle" :
-- Chaque joueur contrôle une moto futuriste qui laisse derrière elle une traînée lumineuse.
-- Cette traînée agit comme un mur : si un joueur entre en collision avec une traînée, il perd.
-- Le but est de piéger les autres joueurs en traçant des lignes et en évitant les collisions.
+## Commandes
 
-🎨 Style visuel :
-- Grille au sol noire avec des lignes lumineuses bleues, rouges, vertes, etc.
-- Esthétique très futuriste, minimaliste, néon.
-- Ambiance de cyber-espace numérique.
+| | Joueur 1 (bleu) | Joueur 2 (orange) |
+|---|---|---|
+| Accélérer / freiner | Z / S | ↑ / ↓ |
+| Tourner | Q / D | ← / → |
 
-## A faire
+En QWERTY, le joueur 1 utilise W A S D (mêmes positions sur le clavier).
 
-- Texture pour créer la grille: doit-on rajouter de la lumière?
-- Voiture qui éclaire le sol avec sa couleur 
-- Faire des étages + passerelles + gestion des chutes
-- Moto qui se penche quand on tourne
+- `Entrée` : lancer la partie
+- `C` : changer de vue (globale, 3e personne, 1re personne)
+- `F11` : plein écran
+- `Échap` : retour au menu, puis quitter
 
-Trail:
-- Mesh unité = 2 triangles
-- Discrétiser pour les courbes
-- version force brute: clear() + réinitialisation du mesh -> fait
-- belle version: Créer un Mesh de taille fixe + update, pré-allouer une taille fixe de sommets + connectivités (modulo la taille)
-- Améliorer le mesh (surtout la couleur, lumière etc)
+## Règles
 
-Lumières sur le sol:
-- Disposées à intervalles réguliers (à chaque coin de quadrangle)
-- Initialiser l'effet qu'elles ont sur le sol à côté (toujours pas fait)
-- Utiliser les N plus proches pour l'effet sur la moto 
--> Problème avec la moto 1 : on ne ovit pas les lumières s'allumer quand elle passe
+- Le premier à `N` points gagne (réglable sur l'écran titre, ainsi que la longueur des murs).
+- On peut passer sous un étage, sous un mur posé à l'étage, et sauter par-dessus un mur avec un tremplin.
+- Les anneaux roses donnent un boost de vitesse pendant 2 s.
 
-Gestion des collisions:
-- Avec n'importe quel muret
-- Dès que la moto touche le muret, elle disparait ou la simulation s'arrête
+## Compiler et lancer
 
-Boosters:
-- Disparaissent lorsqu'on les touche
-- Apparaissent aléatoirement sur la grille (pas plus de 5 boosters)
-- Pourquoi pas ajouter des particules lorsuq'ils disparaissent
+**Windows (Visual Studio)** : lancer `scenes_inf443/project/scripts/windows_cmake_visual.bat`, ouvrir `build/project.sln`, puis F5.
 
-Gestion des sorties de terrain:
-- Chute libre lorsque la moto sort du terrain
-- Si elle tombe en dehors de la grille: reset et l'adversaire gagne un point
+**Version autonome** : `scripts/windows_package.bat` crée un dossier `TRON/` (exécutable sans console + shaders + assets), à zipper et lancer par double-clic sur `TRON.exe`.
 
-Moto:
-- Changer le style de la moto
-- Faire avancer sur un chemin prédéfini / au hasard / nous-mêmes
-- Nous avons fait en sorte d'utiliser deux motos qui avancent avec les touches du clavier
+**Linux** : `python3 scripts/linux_compile_run_cmake.py` (nécessite `libglfw3-dev`).
 
-Skybox:
-- Utilisation d'une image de galaxies
-- Problème d'orientation pour d'autres images, mais celle-ci n'en a pas vraiment donc ok
+**Web** : chaque push sur `main` compile le jeu en WebAssembly et le publie sur GitHub Pages (`.github/workflows/web.yml`).
 
-Collisions et fin du jeu:
-- GUI
-- Prise en compte des collisions : ok
-- Appuyer sur espace pour reset complètement
+## Organisation du code (`scenes_inf443/project/src`)
+
+| Fichier | Rôle |
+|---|---|
+| `scene` | Boucle de jeu : états (menu, compte à rebours, manche, fin de partie), collisions, caméras, rendu, interface |
+| `player` | Moto d'un joueur : commandes, vitesse, boost, physique (rampes, sauts, chute) |
+| `trail` | Mur de lumière : tracé, mesh pré-alloué mis à jour à chaque frame, collisions 3D |
+| `level` | Arène : sol, étages, rampes, tremplins, et requêtes « hauteur du sol » / « obstacle » |
+| `moto_model` | Modèle 3D de la moto (hiérarchie CGP), inclinaison dans les virages |
+| `boosters` | Bonus de vitesse |
+| `explosions` | Particules quand une moto s'écrase |
+| `bloom` | Effet de lueur en post-traitement (rendu hors écran + flou gaussien) |
+
+Shaders (`shaders/`) : `mesh` (Phong éclairé par les motos), `ground` (grille procédurale), `trail` (murs lumineux), `post` (bloom).
+
+## Idées pour la suite
+
+- Multijoueur en réseau local
+- Version mobile pilotée au gyroscope
+- Comptes joueurs pour garder sa progression
+
+## Crédits
+
+Polices Orbitron et Rajdhani (SIL Open Font License, voir `assets/fonts/`).
