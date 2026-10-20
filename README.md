@@ -63,10 +63,13 @@ Le site s'installe comme une appli (« Ajouter à l'écran d'accueil ») : plein
 
 Shaders (`shaders/`) : `mesh` (Phong éclairé par les motos), `ground` (grille procédurale), `trail` (murs lumineux), `post` (bloom).
 
+## Rapport
+
+`rapport/rapport.pdf` relie chaque partie du jeu aux notions du cours d'INF443 (transformations, maillages, Phong, textures et aliassage, animation physique, collisions, IA). Source : `rapport/rapport.tex` (à compiler avec XeLaTeX).
+
 ## Idées pour la suite
 
 - Multijoueur en réseau local
-- Deux joueurs sur une même tablette (une moitié d'écran chacun)
 - Comptes joueurs pour garder sa progression
 
 ## Crédits

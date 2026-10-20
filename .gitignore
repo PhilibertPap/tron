@@ -14,3 +14,10 @@ scenes_inf443/project/index.js
 scenes_inf443/project/index.wasm
 scenes_inf443/project/index.data
 scenes_inf443/project/Makefile_emscripten
+
+# Rapport LaTeX
+rapport/*.aux
+rapport/*.log
+rapport/*.out
+rapport/*.toc
+rapport/*.synctex.gz
