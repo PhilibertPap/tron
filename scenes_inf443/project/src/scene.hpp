@@ -4,6 +4,7 @@
 #include "environment.hpp"
 
 #include "ai_driver.hpp"
+#include "audio.hpp"
 #include "bloom.hpp"
 #include "boosters.hpp"
 #include "explosions.hpp"
@@ -51,6 +52,7 @@ struct scene_structure : cgp::scene_inputs_generic
 	game_options options;
 	game_state state = game_state::title;
 	float state_time = 0; // temps passé dans l'état courant
+	int countdown_value = 0; // dernier chiffre affiché par le compte à rebours
 	std::string round_message;
 
 	level_structure level;
@@ -60,6 +62,7 @@ struct scene_structure : cgp::scene_inputs_generic
 	ai_driver ai;
 	mobile_controls mobile;
 	explosion_effects explosions;
+	audio_system audio;
 	bloom_effect bloom;
 
 	cgp::opengl_shader_structure trail_shader;
@@ -94,6 +97,7 @@ private:
 	void render();
 	void render_view(int x, int y, int width, int height, cgp::mat4 const& view);
 	void send_moto_lights();
+	void update_sound();
 
 	void draw_title_screen();
 	void draw_hud();

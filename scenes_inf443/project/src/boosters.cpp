@@ -28,7 +28,7 @@ void booster_field::clear()
 	spawn_timer = 0;
 }
 
-void booster_field::update(float dt, level_structure const& level, std::vector<player_structure>& players)
+std::vector<size_t> booster_field::update(float dt, level_structure const& level, std::vector<player_structure>& players)
 {
 	spawn_timer += dt;
 	if (spawn_timer > spawn_interval && positions.size() < max_boosters) {
@@ -44,18 +44,21 @@ void booster_field::update(float dt, level_structure const& level, std::vector<p
 		}
 	}
 
-	for (player_structure& player : players) {
-		if (!player.is_riding())
+	std::vector<size_t> boosted;
+	for (size_t i = 0; i < players.size(); ++i) {
+		if (!players[i].is_riding())
 			continue;
 		for (auto it = positions.begin(); it != positions.end(); ) {
-			if (norm(player.position_3d() - *it) < pickup_radius) {
-				player.start_boost();
+			if (norm(players[i].position_3d() - *it) < pickup_radius) {
+				players[i].start_boost();
+				boosted.push_back(i);
 				it = positions.erase(it);
 			}
 			else
 				++it;
 		}
 	}
+	return boosted;
 }
 
 bool booster_field::is_free_spot(vec3 const& p, std::vector<player_structure> const& players) const

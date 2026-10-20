@@ -79,6 +79,7 @@ void scene_structure::initialize()
 	boosters.initialize();
 	explosions.initialize();
 	bloom.initialize(shaders + "post/");
+	audio.initialize(project::path + "assets/sounds/", 2);
 
 	// Tron (bleu) à gauche du clavier (ZQSD en AZERTY, WASD en QWERTY), Clu (orange) sur les flèches.
 	// En solo, Clu est piloté par l'IA.
@@ -108,6 +109,11 @@ void scene_structure::initialize()
 
 void scene_structure::set_state(game_state new_state)
 {
+	if (new_state == game_state::playing)
+		audio.play(sound_effect::go);
+	if (new_state == game_state::countdown)
+		countdown_value = 0;
+
 	state = new_state;
 	state_time = 0;
 }
@@ -148,14 +154,21 @@ void scene_structure::update(float dt)
 	case game_state::match_over:
 		break;
 
-	case game_state::countdown:
+	case game_state::countdown: {
+		int const value = int(countdown_duration - state_time) + 1;
+		if (value != countdown_value && value > 0) {
+			countdown_value = value;
+			audio.play(sound_effect::countdown);
+		}
 		if (state_time > countdown_duration)
 			set_state(game_state::playing);
 		break;
+	}
 
 	case game_state::playing:
 		update_riders(dt);
-		boosters.update(dt, level, players);
+		for (size_t i : boosters.update(dt, level, players))
+			audio.play(sound_effect::boost, players[i].position_3d());
 		detect_collisions();
 		check_end_of_round();
 		break;
@@ -190,7 +203,11 @@ void scene_structure::update_riders(float dt)
 		player_input input;
 		if (state == game_state::playing)
 			input = input_for(i, dt);
+
+		bool const was_riding = players[i].is_riding();
 		players[i].update(input, dt, level);
+		if (was_riding && players[i].status == player_status::falling)
+			audio.play(sound_effect::fall, players[i].position_3d());
 	}
 }
 
@@ -247,6 +264,7 @@ void scene_structure::detect_collisions()
 		if (crashed[i]) {
 			players[i].crash();
 			explosions.spawn(players[i].position_3d(), players[i].color);
+			audio.play(sound_effect::explosion, players[i].position_3d());
 		}
 	}
 }
@@ -305,6 +323,24 @@ void scene_structure::handle_mobile_events()
 }
 
 
+void scene_structure::update_sound()
+{
+	// On écoute depuis la caméra : celle de la vue globale, sinon celle qui suit Tron
+	// (en écran partagé, on ne peut pas écouter depuis deux endroits à la fois)
+	if (options.camera == camera_mode::overview)
+		audio.set_listener(camera_control.camera_model.position(), camera_control.camera_model.front(), { 0, 0, 0 });
+	else {
+		follow_camera const& camera = player_cameras[0];
+		audio.set_listener(camera.eye, normalize(camera.target - camera.eye), players[0].velocity());
+	}
+
+	for (size_t i = 0; i < players.size(); ++i) {
+		bool const running = state != game_state::title && players[i].status != player_status::crashed;
+		audio.update_engine(int(i), players[i].position_3d(), players[i].velocity(), running);
+	}
+}
+
+
 // Affichage 3D
 // ***************************************************************** //
 
@@ -314,6 +350,7 @@ void scene_structure::display_frame()
 	if (mobile.is_active())
 		handle_mobile_events();
 	update(dt);
+	update_sound();
 
 	project::gui_scale = std::max(0.6f, std::min(1.6f, window.height / 1000.0f));
 	render();
@@ -467,6 +504,9 @@ void scene_structure::draw_title_screen()
 	ImGui::SliderFloat("Longueur des murs", &options.wall_length, 40.0f, trail_length_limit, "%.0f m");
 	if (bloom.is_supported())
 		ImGui::Checkbox("Effet de lueur", &options.bloom);
+	bool sound = !audio.is_muted();
+	if (ImGui::Checkbox("Son", &sound))
+		audio.set_muted(!sound);
 
 	ImGui::Separator();
 	if (options.solo) {
@@ -483,7 +523,7 @@ void scene_structure::draw_title_screen()
 		ImGui::Text("Flèches");
 	}
 	ImGui::Spacing();
-	ImGui::TextDisabled("C : changer de vue    F11 : plein écran    Échap : menu / quitter");
+	ImGui::TextDisabled("C : changer de vue    M : couper le son    F11 : plein écran    Échap : menu / quitter");
 	ImGui::End();
 
 	float const pulse = 0.6f + 0.4f * std::sin(4.0f * timer.t);
@@ -553,6 +593,9 @@ void scene_structure::keyboard_event()
 		for (size_t i = 0; i < players.size(); ++i)
 			player_cameras[i].snap(players[i], options.camera);
 	}
+
+	if (key.is_pressed(GLFW_KEY_M))
+		audio.set_muted(!audio.is_muted());
 
 	if (key.is_pressed(GLFW_KEY_F11)) {
 		window.is_full_screen = !window.is_full_screen;

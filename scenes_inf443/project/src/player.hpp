@@ -66,6 +66,7 @@ struct player_structure
 	bool is_riding() const { return status == player_status::riding; }
 	cgp::vec2 direction() const;
 	cgp::vec3 position_3d() const;
+	cgp::vec3 velocity() const;
 	cgp::vec3 front() const;
 	cgp::vec3 rear() const;
 

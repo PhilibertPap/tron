@@ -15,8 +15,9 @@ struct booster_field
 	void initialize();
 	void clear();
 
-	// Fait apparaître de nouveaux bonus et donne le boost aux motos qui passent dessus
-	void update(float dt, level_structure const& level, std::vector<player_structure>& players);
+	// Fait apparaître de nouveaux bonus et donne le boost aux motos qui passent dessus.
+	// Renvoie les indices des joueurs qui viennent de prendre un boost.
+	std::vector<size_t> update(float dt, level_structure const& level, std::vector<player_structure>& players);
 	void draw(environment_structure const& environment, float time);
 
 private:

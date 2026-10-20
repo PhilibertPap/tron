@@ -150,6 +150,12 @@ vec3 player_structure::position_3d() const
 	return { position.x, position.y, altitude };
 }
 
+vec3 player_structure::velocity() const
+{
+	vec2 const v = speed * direction();
+	return { v.x, v.y, vertical_speed };
+}
+
 vec3 player_structure::front() const
 {
 	vec2 const p = position + moto_half_length * direction();
