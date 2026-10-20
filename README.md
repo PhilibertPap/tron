@@ -22,6 +22,7 @@ En QWERTY, Tron utilise W A S D (mêmes positions sur le clavier). En solo, ZQSD
 
 - `Entrée` : lancer la partie
 - `C` : changer de vue (globale, 3e personne, 1re personne)
+- `M` : couper / remettre le son
 - `F11` : plein écran
 - `Échap` : retour au menu, puis quitter
 
@@ -41,6 +42,7 @@ En QWERTY, Tron utilise W A S D (mêmes positions sur le clavier). En solo, ZQSD
 **Linux** : `python3 scripts/linux_compile_run_cmake.py` (nécessite `libglfw3-dev`).
 
 **Web** : chaque push sur `main` compile le jeu en WebAssembly et le publie sur GitHub Pages (`.github/workflows/web.yml`).
+Le site s'installe comme une appli (« Ajouter à l'écran d'accueil ») : plein écran, sans les barres du navigateur, et jouable hors ligne une fois chargé (`scripts/web/` : manifeste, service worker, icônes).
 
 ## Organisation du code (`scenes_inf443/project/src`)
 
@@ -57,6 +59,7 @@ En QWERTY, Tron utilise W A S D (mêmes positions sur le clavier). En solo, ZQSD
 | `boosters` | Bonus de vitesse |
 | `explosions` | Particules quand une moto s'écrase |
 | `bloom` | Effet de lueur en post-traitement (rendu hors écran + flou gaussien) |
+| `audio` | Sons (miniaudio) : moteurs spatialisés dont la hauteur suit la vitesse, explosions, boost, compte à rebours |
 
 Shaders (`shaders/`) : `mesh` (Phong éclairé par les motos), `ground` (grille procédurale), `trail` (murs lumineux), `post` (bloom).
 
@@ -69,3 +72,4 @@ Shaders (`shaders/`) : `mesh` (Phong éclairé par les motos), `ground` (grille 
 ## Crédits
 
 Polices Orbitron et Rajdhani (SIL Open Font License, voir `assets/fonts/`).
+Son : bibliothèque [miniaudio](https://miniaud.io) (domaine public / MIT-0). Les effets sonores sont synthétisés par `scripts/generate_sounds.py`.

@@ -33,6 +33,7 @@ jobs:
           emmake make -f Makefile_emscripten -j$(nproc)
           mkdir -p ../../_site
           cp index.html index.js index.wasm index.data ../../_site/
+          cp scripts/web/manifest.webmanifest scripts/web/sw.js scripts/web/*.png ../../_site/
 
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -5,9 +5,18 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 	<meta name="theme-color" content="#000000">
 	<title>TRON — Light Cycles</title>
+
+	<!-- Version installable : icône sur l'écran d'accueil, plein écran, jouable hors ligne -->
+	<link rel="manifest" href="manifest.webmanifest">
+	<link rel="apple-touch-icon" href="apple-touch-icon.png">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="apple-mobile-web-app-title" content="TRON">
 	<style>
 		html, body { margin: 0; height: 100%; background: #000; overflow: hidden; overscroll-behavior: none; }
-		#canvas { display: block; width: 100vw; height: 100vh; outline: none; touch-action: none; }
+		/* Sur téléphone, 100vh compte aussi la place des barres du navigateur : on colle le canvas à la zone visible */
+		#canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
 
 		#loading {
 			position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -28,8 +37,13 @@
 		}
 		#rotate-hint { display: none; color: #ffb36b; }
 		@media (orientation: portrait) { #rotate-hint { display: block; } }
+		#install-hint { display: none; font-size: 14px; color: #9fdcff; }
+		#install-button { display: none; }
 
-		#menu-button { position: fixed; top: 10px; left: 10px; display: none; padding: 6px 12px; font-size: 14px; }
+		#menu-button {
+			position: fixed; display: none; padding: 6px 12px; font-size: 14px;
+			top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left));
+		}
 	</style>
 </head>
 <body>
@@ -45,24 +59,36 @@
 			<button data-level="1">Normal</button>
 			<button data-level="2">Difficile</button>
 		</div>
+		<p id="install-hint">Pour jouer en plein écran, sans les barres du navigateur :<br>bouton Partager, puis « Sur l'écran d'accueil ».</p>
+		<button id="install-button">Installer le jeu</button>
 	</div>
 	<button id="menu-button">Menu</button>
 
 	<script>
 		var canvas = document.getElementById('canvas');
 
+		// Taille du canvas = zone réellement visible (sans les barres du navigateur sur téléphone)
 		function resize() {
-			canvas.width = window.innerWidth;
-			canvas.height = window.innerHeight;
+			var view = window.visualViewport;
+			canvas.width = Math.round(view ? view.width : window.innerWidth);
+			canvas.height = Math.round(view ? view.height : window.innerHeight);
 		}
 		resize();
 		window.addEventListener('resize', resize);
+		if (window.visualViewport)
+			window.visualViewport.addEventListener('resize', resize);
 
-		// Les flèches et Espace ne doivent pas faire défiler la page
 		window.addEventListener('keydown', function (e) {
+			// Les flèches et Espace ne doivent pas faire défiler la page
 			if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].indexOf(e.key) >= 0)
 				e.preventDefault();
+			// Le navigateur n'autorise le son qu'après une action du joueur : une touche suffit
+			if (window.miniaudio && window.miniaudio.unlock)
+				window.miniaudio.unlock();
 		});
+
+		if ('serviceWorker' in navigator)
+			navigator.serviceWorker.register('sw.js').catch(function () {});
 
 		var Module = {
 			canvas: canvas,
@@ -182,8 +208,27 @@
 			menuButton.style.display = 'block';
 		}
 
-		mobileMenu.querySelectorAll('button').forEach(function (button) {
+		mobileMenu.querySelectorAll('.levels button').forEach(function (button) {
 			button.addEventListener('click', function () { startMobileGame(Number(button.dataset.level)); });
+		});
+
+		// Installation sur l'écran d'accueil : bouton sur Android, explication sur iPhone (pas de bouton possible)
+		var installedApp = window.matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches || navigator.standalone;
+		var isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+		if (isIOS && !installedApp)
+			document.getElementById('install-hint').style.display = 'block';
+
+		var installPrompt = null;
+		var installButton = document.getElementById('install-button');
+		window.addEventListener('beforeinstallprompt', function (e) {
+			e.preventDefault();
+			installPrompt = e;
+			installButton.style.display = 'inline-block';
+		});
+		installButton.addEventListener('click', function () {
+			if (installPrompt)
+				installPrompt.prompt();
+			installButton.style.display = 'none';
 		});
 		menuButton.addEventListener('click', function () {
 			tronMobile.menuRequest = true;
